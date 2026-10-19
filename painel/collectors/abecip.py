@@ -69,7 +69,8 @@ def collect(refresh: bool = True):
     for r in ws.iter_rows(values_only=True):
         if header is None:
             if r and r[0] == "Mês":
-                header = [("BR" if str(h).upper() == "BRASIL" else h) for h in r]
+                # só colunas de localidade; a planilha traz colunas auxiliares como "var% 12 meses"
+                header = [("BR" if str(h).upper() == "BRASIL" else (None if h is None or "%" in str(h) else h)) for h in r]
             continue
         d = _month(r[0]) if r and r[0] is not None else None
         if not d:

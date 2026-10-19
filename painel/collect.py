@@ -10,13 +10,14 @@ import sys
 import traceback
 
 from . import store
-from .collectors import abecip, abrainc, bcb_olinda, bcb_sgs, fipezap, secovi, sidra
+from .collectors import abecip, abrainc, bcb_olinda, bcb_sgs, secovi, sidra
 
+# fipezap.py continua no pacote, mas fora do painel: índice de preço de OFERTA (anúncios),
+# considerado pouco confiável. Preços ficam com IGMI-R (transação) e IVG-R (BCB).
 COLLECTORS = {
     "bcb_olinda": bcb_olinda.collect,
     "bcb_sgs": bcb_sgs.collect,
     "sidra": sidra.collect,
-    "fipezap": fipezap.collect,
     "abecip": abecip.collect,
     "abrainc": abrainc.collect,
     "secovi": secovi.collect,

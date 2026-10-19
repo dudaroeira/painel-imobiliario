@@ -21,10 +21,12 @@ Abra `dashboard/index.html` no navegador — não precisa de servidor. Para atua
 | `bcb_olinda` | BCB — Informações do Mercado Imobiliário | Crédito contratado, taxa, LTV, indexador, carteira, inadimplência (PF/PJ × fonte × UF); funding (SBPE, LCI, CRI, LIG); perfil dos imóveis financiados; IVG-R | API OData, ano a ano |
 | `bcb_sgs` | BCB — SGS | Selic, IPCA, INCC-DI, IGP-M, TR, poupança, desemprego, IBC-Br | API JSON |
 | `sidra` | IBGE — SIDRA | SINAPI (custo m² por UF), PIB da construção e total | API JSON |
-| `fipezap` | Fipe/ZAP | Preço de oferta de venda e locação, rental yield, ~56 cidades | XLSX com URL fixa |
 | `abecip` | ABECIP | Unidades e R$ financiados com SBPE (construção × aquisição); IGMI-R (preço de transação, Brasil + 10 capitais) | XLSX (link raspado da página) |
 | `abrainc` | Abrainc-Fipe | Lançamentos, vendas, entregas, distratos, oferta, VGV por segmento (MCMV × MAP) | XLSX série histórica (link raspado) |
 | `secovi` | Secovi-SP — PMI | Lançamentos, vendas, oferta, VSO, VGV/VGL/VGO — cidade de São Paulo | PDF mensal (quadro-resumo da pág. 4) |
+
+Preços usam só índices de **transação** (IGMI-R, IVG-R/MVG-R). O coletor `fipezap.py` (preço de oferta em
+anúncios) continua no pacote, mas fora do painel por decisão de confiabilidade.
 
 Detalhes do levantamento de fontes e das decisões em [mapa-de-dados.md](mapa-de-dados.md).
 

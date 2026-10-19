@@ -110,7 +110,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:12px;margin-top:6px}
       </span>
     </label>
     <label id="ufwrap">UF <select id="uf"></select></label>
-    <label id="citywrap">Cidade (preços) <select id="city"></select></label>
+    <label id="citywrap">Capital (preços) <select id="city"></select></label>
     <label class="theme">Tema <select id="theme"><option value="">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
   </div>
   <div id="views"></div>
@@ -123,6 +123,8 @@ const D = PAYLOAD.data;
 const COLORS = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'].map(v=>`var(${v})`);
 const UF_NAMES = {BR:'Brasil',AC:'Acre',AL:'Alagoas',AM:'Amazonas',AP:'Amapá',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MG:'Minas Gerais',MS:'Mato Grosso do Sul',MT:'Mato Grosso',PA:'Pará',PB:'Paraíba',PE:'Pernambuco',PI:'Piauí',PR:'Paraná',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RO:'Rondônia',RR:'Roraima',RS:'Rio Grande do Sul',SC:'Santa Catarina',SE:'Sergipe',SP:'São Paulo',TO:'Tocantins'};
 const state = {view:'visao', years:5, uf:'BR', city:'São Paulo'};
+const IPCA_BASE='2014-01';
+function ipcaIndex(base=IPCA_BASE){ let acc=100; return S('bcb_sgs','ipca').filter(p=>p[0]>=base).map(p=>{acc*=1+p[1]/100; return [p[0],acc];}); }
 
 // ---------- acesso a dados ----------
 function S(src, sid, region='BR'){ const e = D[src]?.[sid]; if(!e) return []; return e.regions[region] || e.regions[Object.keys(e.regions)[0]] || []; }
@@ -267,7 +269,7 @@ function viewVisao(root){
   const totPF = mergeSum(cred); const r12=roll12(totPF);
   const ab_l=roll12(S('abrainc','lancamentos_total')), ab_v=roll12(S('abrainc','vendas_total'));
   const sbpe=roll12(S('abecip','sbpe_unid_total'));
-  const fz=S('fipezap','venda_var12m','BR'), ig=yoy(S('abecip','igmi_r','BR'));
+  const ig=yoy(S('abecip','igmi_r','BR')), ivg=yoy(S('bcb_olinda','indices_ivg_r','BR'));
   const selic=S('bcb_sgs','selic_meta_m'), inad=S('bcb_olinda','credito_estoque_inadimplencia_pf_sfh','BR');
   const vso=S('secovi','vso_12m','São Paulo (cidade)');
   const L=last(r12);
@@ -276,8 +278,8 @@ function viewVisao(root){
   g.append(tile({label:'Selic (meta)',value:last(selic)?nf2.format(last(selic)[1])+'% a.a.':'–',delta:diffAbs(selic,12)!=null?fmtPct(diffAbs(selic,12),2).replace('%',' pp'):null,upGood:false,ref:last(selic)?fmtYMlong(last(selic)[0])+' · BCB':''}));
   g.append(tile({label:'Lançamentos — 12 meses (amostra Abrainc, ~20 incorporadoras)',value:last(ab_l)?fmtNum(last(ab_l)[1])+' unid.':'–',delta:diffPct(ab_l,12),ref:last(ab_l)?'até '+fmtYMlong(last(ab_l)[0])+' · Abrainc-Fipe':''}));
   g.append(tile({label:'Vendas — 12 meses (amostra Abrainc)',value:last(ab_v)?fmtNum(last(ab_v)[1])+' unid.':'–',delta:diffPct(ab_v,12),ref:last(ab_v)?'até '+fmtYMlong(last(ab_v)[0])+' · Abrainc-Fipe':''}));
-  g.append(tile({label:'Preço de oferta — venda (FipeZap Brasil, 12 meses)',value:last(fz)?fmtPct(last(fz)[1]):'–',ref:last(fz)?fmtYMlong(last(fz)[0])+' · Fipe/ZAP':''}));
   g.append(tile({label:'Preço de transação — IGMI-R Brasil (12 meses)',value:last(ig)?fmtPct(last(ig)[1]):'–',ref:last(ig)?fmtYMlong(last(ig)[0])+' · ABECIP/FGV':''}));
+  g.append(tile({label:'Valor de garantia — IVG-R Brasil (12 meses)',value:last(ivg)?fmtPct(last(ivg)[1]):'–',ref:last(ivg)?fmtYMlong(last(ivg)[0])+' · BCB':''}));
   g.append(tile({label:'Inadimplência SFH (PF, Brasil)',value:last(inad)?nf2.format(last(inad)[1])+'%':'–',delta:diffAbs(inad,12)!=null?fmtPct(diffAbs(inad,12),2).replace('%',' pp'):null,upGood:false,ref:last(inad)?fmtYMlong(last(inad)[0])+' · BCB':''}));
   g.append(tile({label:'VSO 12 meses — cidade de São Paulo',value:last(vso)?nf2.format(last(vso)[1])+'%':'–',delta:diffAbs(vso,12)!=null?fmtPct(diffAbs(vso,12),1).replace('%',' pp'):null,ref:last(vso)?fmtYMlong(last(vso)[0])+' · Secovi-SP':''}));
   g.append(tile({label:'IPCA 12 meses',value:last(S('bcb_sgs','ipca_12m'))?nf2.format(last(S('bcb_sgs','ipca_12m'))[1])+'%':'–',upGood:false,ref:'IBGE via BCB'}));
@@ -286,8 +288,8 @@ function viewVisao(root){
     table:()=>[{name:'SFH',data:cred[0],fmt:fmtBRL},{name:'FGTS',data:cred[1],fmt:fmtBRL},{name:'Livre',data:cred[2],fmt:fmtBRL},{name:'Home equity',data:cred[3],fmt:fmtBRL}]}));
   g.append(chartCard({title:'Lançamentos × vendas — acumulado 12 meses (amostra Abrainc-Fipe)',note:'~20 incorporadoras associadas; não é censo nacional. Vendas acima de lançamentos = estoque caindo.',src:'Abrainc-Fipe',span:6,
     render:b=>lineChart(b,{series:[{name:'Lançamentos 12m',data:cut(ab_l)},{name:'Vendas 12m',data:cut(ab_v)}],fmt:fmtNum,labelEnd:true}),table:()=>[{name:'Lançamentos 12m',data:ab_l},{name:'Vendas 12m',data:ab_v}]}));
-  g.append(chartCard({title:'Preços: oferta (FipeZap) × transação (IGMI-R) × IPCA — variação em 12 meses, Brasil',note:'FipeZap mede preço pedido em anúncios; IGMI-R mede avaliações de imóveis efetivamente financiados.',src:'Fipe/ZAP; ABECIP/FGV; IBGE',span:12,
-    render:b=>lineChart(b,{series:[{name:'FipeZap venda',data:cut(fz)},{name:'IGMI-R',data:cut(ig)},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m'))}],fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
+  g.append(chartCard({title:'Preços de imóveis × inflação — variação em 12 meses, Brasil',note:'IGMI-R (ABECIP/FGV) e IVG-R (BCB) são índices de preço de transação, calculados sobre avaliações de imóveis efetivamente financiados.',src:'ABECIP/FGV; BCB; IBGE',span:12,
+    render:b=>lineChart(b,{series:[{name:'IGMI-R',data:cut(ig)},{name:'IVG-R',data:cut(ivg)},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m')),color:'var(--muted)'}],fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
   root.append(g);
 }
 function mergeSum(list){ const m=new Map(); for(const s of list) for(const [d,v] of s) m.set(d,(m.get(d)||0)+v); return [...m].sort((a,b)=>a[0]<b[0]?-1:1); }
@@ -345,20 +347,19 @@ function viewFunding(root){
 
 function viewPrecos(root){
   const g=el('div',{class:'grid'}); const city=state.city;
-  const F=(k,r)=>S('fipezap',k,r);
-  g.append(el('div',{class:'c12',html:`<p class="note" style="margin:0 0 -4px;color:var(--muted)">Cidade selecionada: <b>${city}</b>. FipeZap = preço de <b>oferta</b> (anúncios); IGMI-R = preço de <b>transação</b> (avaliações de imóveis financiados).</p>`}));
-  g.append(chartCard({title:`Variação em 12 meses — venda e locação: ${city} × Brasil`,src:'Fipe/ZAP',render:b=>lineChart(b,{series:[{name:`Venda — ${city}`,data:cut(F('venda_var12m',city))},{name:`Locação — ${city}`,data:cut(F('locacao_var12m',city))},{name:'Venda — Brasil',data:cut(F('venda_var12m','BR')),color:'var(--muted)'},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m')),color:'var(--s8)'}],fmt:v=>nf2.format(v)+'%'})}));
-  g.append(chartCard({title:`Preço médio de oferta — ${city} (R$/m²)`,src:'Fipe/ZAP',render:b=>lineChart(b,{series:[{name:'Venda R$/m²',data:cut(F('venda_preco_m2',city))}],fmt:fmtBRL,area:true,labelEnd:true,zero:false})}));
-  g.append(chartCard({title:`Rental yield — aluguel ÷ preço (% ao mês): ${city} × Brasil`,note:'Compare com a Selic mensal: quanto maior o gap, menos atraente o imóvel para investidor.',src:'Fipe/ZAP; BCB',render:b=>lineChart(b,{series:[{name:city,data:cut(F('rental_yield',city))},{name:'Brasil',data:cut(F('rental_yield','BR'))},{name:'Selic a.m.',data:cut(S('bcb_sgs','selic_meta_m').map(p=>[p[0],(Math.pow(1+p[1]/100,1/12)-1)*100])),color:'var(--muted)'}],fmt:v=>nf2.format(v)+'%',labelEnd:true,zero:false})}));
-  const igReg=regionsOf('abecip','igmi_r'); const igCity = igReg.includes(city)?city:'BR';
-  g.append(chartCard({title:`Transação × oferta: IGMI-R e FipeZap indexados (jan/2014 = 100) — ${igCity==='BR'?'Brasil':igCity}`,note:igCity==='BR'&&city!=='São Paulo'?`IGMI-R não cobre ${city}; mostrando Brasil.`:'',src:'ABECIP/FGV; Fipe/ZAP; IBGE',render:b=>{ const ipca=S('bcb_sgs','ipca'); let acc=100; const ipIdx=ipca.filter(p=>p[0]>='2014-01').map(p=>{acc*=1+p[1]/100; return [p[0],acc];}); lineChart(b,{series:[{name:'IGMI-R (transação)',data:cut(S('abecip','igmi_r',igCity))},{name:'FipeZap venda (oferta)',data:cut(index100(F('venda_indice',igCity==='BR'?'BR':igCity),'2014-01'))},{name:'IPCA acumulado',data:cut(ipIdx),color:'var(--muted)'}],fmt:v=>nf.format(v),zero:false,labelEnd:true}); }}));
-  // ranking cidades
-  const cities=regionsOf('fipezap','venda_var12m').filter(c=>c!=='BR'); const rk=cities.map(c=>{const s=F('venda_var12m',c); const l=last(s); return l?{c,v:l[1],d:l[0],p:last(F('venda_preco_m2',c))?.[1]}:null;}).filter(Boolean).sort((a,b)=>b.v-a.v);
-  const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Ranking de cidades — variação do preço de venda em 12 meses (FipeZap)'),el('p',{class:'note'},`${rk.length} cidades · referência ${rk[0]?fmtYMlong(rk[0].d):''}`));
-  const wrap=el('div',{class:'tablewrap'}); const t=el('table'); t.append(el('thead',{},el('tr',{},el('th',{},'#'),el('th',{},'Cidade'),el('th',{class:'n'},'Var. 12m'),el('th',{class:'n'},'R$/m² venda'),el('th',{},''))));
+  const IG=r=>S('abecip','igmi_r',r); const igBR=IG('BR'), igCity=IG(city);
+  g.append(el('div',{class:'c12',html:`<p class="note" style="margin:0 0 -4px;color:var(--muted)">Capital selecionada: <b>${city}</b>. Só índices de preço de <b>transação</b>: IGMI-R (ABECIP/FGV, avaliações de imóveis financiados, Brasil + 10 capitais) e IVG-R (BCB, valores de garantia). Nenhum usa preço de anúncio.</p>`}));
+  g.append(chartCard({title:`IGMI-R — variação em 12 meses: ${city} × Brasil × IPCA`,src:'ABECIP/FGV; IBGE',render:b=>lineChart(b,{series:[{name:city,data:cut(yoy(igCity))},{name:'Brasil',data:cut(yoy(igBR)),color:'var(--muted)'},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m')),color:'var(--s8)'}],fmt:v=>nf2.format(v)+'%',labelEnd:true}),table:()=>[{name:city+' (12m %)',data:yoy(igCity),fmt:v=>nf2.format(v)+'%'},{name:'Brasil (12m %)',data:yoy(igBR),fmt:v=>nf2.format(v)+'%'}]}));
+  g.append(chartCard({title:`IGMI-R em termos reais — ${city} × Brasil (índice ÷ IPCA, jan/2014 = 100)`,note:'Acima de 100 = imóvel valorizou mais que a inflação desde 2014.',src:'ABECIP/FGV; IBGE',render:b=>{ const ip=new Map(ipcaIndex()); const real=s=>s.filter(p=>ip.has(p[0])).map(p=>[p[0],p[1]/ip.get(p[0])*100]); lineChart(b,{series:[{name:city,data:cut(real(igCity))},{name:'Brasil',data:cut(real(igBR)),color:'var(--muted)'}],fmt:v=>nf.format(v),zero:false,labelEnd:true}); }}));
+  g.append(chartCard({title:'IGMI-R × IVG-R × IPCA acumulado — Brasil (jan/2014 = 100)',note:'Duas medidas independentes de preço de transação; IVG-R vem das garantias registradas no SFN.',src:'ABECIP/FGV; BCB; IBGE',render:b=>lineChart(b,{series:[{name:'IGMI-R',data:cut(igBR)},{name:'IVG-R',data:cut(index100(S('bcb_olinda','indices_ivg_r','BR'),'2014-01'))},{name:'IPCA acumulado',data:cut(ipcaIndex()),color:'var(--muted)'}],fmt:v=>nf.format(v),zero:false,labelEnd:true})}));
+  g.append(chartCard({title:'Valor mediano de garantia — MVG-R, Brasil (R$)',note:'Mediana do valor avaliado dos imóveis dados em garantia nos financiamentos do mês.',src:'BCB',render:b=>lineChart(b,{series:[{name:'MVG-R',data:cut(S('bcb_olinda','indices_mvg_r','BR'))}],fmt:fmtBRL,area:true,zero:false,labelEnd:true})}));
+  // ranking de capitais pelo IGMI-R
+  const caps=regionsOf('abecip','igmi_r').filter(c=>c!=='BR'); const rk=caps.map(c=>{const s=yoy(IG(c)); const l=last(s); const r12=IG(c); return l?{c,v:l[1],d:l[0],idx:last(r12)[1]}:null;}).filter(Boolean).sort((a,b)=>b.v-a.v);
+  const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Ranking de capitais — IGMI-R, variação em 12 meses'),el('p',{class:'note'},`${rk.length} capitais · referência ${rk[0]?fmtYMlong(rk[0].d):''}`));
+  const wrap=el('div',{class:'tablewrap'}); const t=el('table'); t.append(el('thead',{},el('tr',{},el('th',{},'#'),el('th',{},'Capital'),el('th',{class:'n'},'Var. 12m'),el('th',{class:'n'},'Índice (jan/14=100)'),el('th',{},''))));
   const tb=el('tbody'); const mx=Math.max(...rk.map(r=>Math.abs(r.v)));
-  rk.forEach((r,i)=>{ const bar=el('div'); bar.style.cssText=`height:8px;border-radius:4px;background:${r.v>=0?'var(--s1)':'var(--s8)'};width:${Math.abs(r.v)/mx*100}%;min-width:2px`; tb.append(el('tr',{},el('td',{},String(i+1)),el('td',{},r.c),el('td',{class:'n'},fmtPct(r.v)),el('td',{class:'n'},r.p?fmtBRL(r.p):'–'),el('td',{style:'width:30%'},bar))); });
-  t.append(tb); wrap.append(t); card.append(wrap, el('p',{class:'src'},'Fonte: Fipe/ZAP')); g.append(card);
+  rk.forEach((r,i)=>{ const bar=el('div'); bar.style.cssText=`height:8px;border-radius:4px;background:${r.v>=0?'var(--s1)':'var(--s8)'};width:${Math.abs(r.v)/mx*100}%;min-width:2px`; tb.append(el('tr',{},el('td',{},String(i+1)),el('td',{},r.c),el('td',{class:'n'},fmtPct(r.v)),el('td',{class:'n'},nf.format(r.idx)),el('td',{style:'width:30%'},bar))); });
+  t.append(tb); wrap.append(t); card.append(wrap, el('p',{class:'src'},'Fonte: ABECIP/FGV')); g.append(card);
   root.append(g);
 }
 
@@ -389,7 +390,7 @@ function viewImoveis(root){
 
 function viewFontes(root){
   const g=el('div',{class:'grid'});
-  const meta=PAYLOAD.meta; const order=['bcb_olinda','bcb_sgs','sidra','fipezap','abecip','abrainc','secovi'];
+  const meta=PAYLOAD.meta; const order=['bcb_olinda','bcb_sgs','sidra','abecip','abrainc','secovi'];
   const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Fontes coletadas'),el('p',{class:'note'},'Cada fonte tem coletor próprio em painel/collectors/. Rode `python -m painel.collect` para atualizar e `python -m painel.build` para regenerar esta página.'));
   const t=el('table'); t.append(el('thead',{},el('tr',{},el('th',{},'Fonte'),el('th',{},'Cobertura'),el('th',{class:'n'},'Séries'),el('th',{class:'n'},'Linhas'),el('th',{},'Período'),el('th',{},'Coletado em'),el('th',{},'URL'))));
   const tb=el('tbody'); for(const k of order){ const m=meta[k]; if(!m) continue; const a=el('a',{href:m.url,target:'_blank',rel:'noopener'},m.url.replace(/^https?:\/\//,'').slice(0,48)); tb.append(el('tr',{},el('td',{},el('b',{},m.title||k)),el('td',{},m.coverage||''),el('td',{class:'n'},nf0.format(m.series)),el('td',{class:'n'},nf0.format(m.rows)),el('td',{},(m.first_date||'').slice(0,7)+' → '+(m.last_date||'').slice(0,7)),el('td',{},(m.collected_at||'').replace('T',' ').slice(0,16)),el('td',{},a))); }
@@ -398,7 +399,7 @@ function viewFontes(root){
   const t2=el('table'); t2.append(el('thead',{},el('tr',{},el('th',{},'Fonte'),el('th',{},'Série'),el('th',{},'Nome'),el('th',{},'Bloco'),el('th',{},'Unid.'),el('th',{class:'n'},'Regiões'),el('th',{},'Último dado'))));
   const tb2=el('tbody'); for(const src of Object.keys(D)) for(const [sid,e] of Object.entries(D[src])){ const regs=Object.keys(e.regions); const lastD=Math.max(...regs.map(r=>e.regions[r].length?e.regions[r][e.regions[r].length-1][0].replace('-',''):0)); tb2.append(el('tr',{},el('td',{},src),el('td',{},el('code',{},sid)),el('td',{},e.name),el('td',{},e.block),el('td',{},e.unit),el('td',{class:'n'},String(regs.length)),el('td',{},String(lastD).replace(/(\d{4})(\d{2})/,'$1-$2')))); }
   t2.append(tb2); c2.append(el('div',{class:'tablewrap'},t2)); g.append(c2);
-  const c3=el('div',{class:'card c12'}); c3.append(el('h3',{},'Limitações conhecidas'),el('ul',{html:'<li>Lançamentos/vendas/estoque: só amostras (Abrainc ≈ 20 incorporadoras; Secovi = cidade de SP). Não há censo nacional aberto.</li><li>BCB publica crédito em R$; o número de unidades vem só da ABECIP (SBPE) — FGTS em unidades depende do Ministério das Cidades (a implementar).</li><li>Séries de LCI/CRI/LIG do BCB terminam em fev/2025; substituir por B3/ANBIMA.</li><li>Secovi: alguns meses de 2024 não foram localizados no padrão de URL dos PDFs.</li><li>FipeZap é preço pedido em anúncios; IGMI-R, preço avaliado em financiamentos. Nenhum é preço de escritura.</li>'})); g.append(c3);
+  const c3=el('div',{class:'card c12'}); c3.append(el('h3',{},'Limitações conhecidas'),el('ul',{html:'<li>Lançamentos/vendas/estoque: só amostras (Abrainc ≈ 20 incorporadoras; Secovi = cidade de SP). Não há censo nacional aberto.</li><li>BCB publica crédito em R$; o número de unidades vem só da ABECIP (SBPE) — FGTS em unidades depende do Ministério das Cidades (a implementar).</li><li>Séries de LCI/CRI/LIG do BCB terminam em fev/2025; substituir por B3/ANBIMA.</li><li>Secovi: alguns meses de 2024 não foram localizados no padrão de URL dos PDFs.</li><li>Preços: IGMI-R e IVG-R medem avaliações de imóveis financiados (não preço de escritura nem de anúncio); índices de oferta como o FipeZap foram deliberadamente deixados de fora.</li>'})); g.append(c3);
   root.append(g);
 }
 
@@ -420,7 +421,7 @@ function init(){
   const nav=document.getElementById('nav'); VIEWS.forEach(v=>nav.append(el('button',{role:'tab','data-v':v.id,onclick:()=>{state.view=v.id;render();}},v.label)));
   const ufs=regionsOf('bcb_olinda','credito_contratacao_contratado_pf_sfh').sort((a,b)=>a==='BR'?-1:b==='BR'?1:(UF_NAMES[a]||a).localeCompare(UF_NAMES[b]||b));
   const ufSel=document.getElementById('uf'); ufs.forEach(u=>ufSel.append(el('option',{value:u},UF_NAMES[u]||u))); ufSel.value=state.uf; ufSel.onchange=()=>{state.uf=ufSel.value;render();};
-  const cities=regionsOf('fipezap','venda_var12m').filter(c=>c!=='BR').sort((a,b)=>a.localeCompare(b));
+  const cities=regionsOf('abecip','igmi_r').filter(c=>c!=='BR').sort((a,b)=>a.localeCompare(b));
   const citySel=document.getElementById('city'); cities.forEach(c=>citySel.append(el('option',{value:c},c))); if(!cities.includes(state.city)) state.city=cities[0]; citySel.value=state.city; citySel.onchange=()=>{state.city=citySel.value;render();};
   document.querySelectorAll('#range button').forEach(b=>b.onclick=()=>{state.years=+b.dataset.y;render();});
   const th=document.getElementById('theme'); try{ th.value=localStorage.getItem('theme')||''; }catch(e){} applyTheme(th.value); th.onchange=()=>{ applyTheme(th.value); try{localStorage.setItem('theme',th.value);}catch(e){} };
