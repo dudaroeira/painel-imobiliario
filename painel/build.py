@@ -46,6 +46,7 @@ SELECT = {
                "sbpe_rs_total": ["BR"], "igmi_r": None},
     "abrainc": None,  # todas
     "secovi": None,
+    "cbic": None,
 }
 START = "2012-01-01"
 

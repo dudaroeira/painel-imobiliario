@@ -132,7 +132,9 @@ function has(src,sid,region){ return !!(D[src]?.[sid]?.regions[region]); }
 function regionsOf(src,sid){ return Object.keys(D[src]?.[sid]?.regions||{}); }
 const last = s => s.length ? s[s.length-1] : null;
 const lastN = (s,n) => s.slice(Math.max(0,s.length-n));
-function roll12(s){ const o=[]; for(let i=11;i<s.length;i++){ let t=0; for(let j=i-11;j<=i;j++) t+=s[j][1]; o.push([s[i][0],t]); } return o; }
+function rollN(s,n){ const o=[]; for(let i=n-1;i<s.length;i++){ let t=0; for(let j=i-n+1;j<=i;j++) t+=s[j][1]; o.push([s[i][0],t]); } return o; }
+const roll12 = s => rollN(s,12);
+const roll4 = s => rollN(s,4); // 4 trimestres = 12 meses
 function yoy(s){ const m=new Map(s.map(p=>[p[0],p[1]])); return s.filter(p=>m.has(prevYear(p[0]))).map(p=>[p[0],(p[1]/m.get(prevYear(p[0]))-1)*100]); }
 function prevYear(ym){ return (parseInt(ym.slice(0,4))-1)+ym.slice(4); }
 function index100(s, base){ const b = base ? s.find(p=>p[0]>=base) : s[0]; if(!b) return []; return s.filter(p=>p[0]>=b[0]).map(p=>[p[0],p[1]/b[1]*100]); }
@@ -267,7 +269,7 @@ function viewVisao(root){
   const g=el('div',{class:'grid'});
   const cred = ['sfh','fgts','livre','home_equity'].map(k=>S('bcb_olinda',`credito_contratacao_contratado_pf_${k}`,'BR'));
   const totPF = mergeSum(cred); const r12=roll12(totPF);
-  const ab_l=roll12(S('abrainc','lancamentos_total')), ab_v=roll12(S('abrainc','vendas_total'));
+  const cb_l=roll4(S('cbic','lancamentos','BR')), cb_v=roll4(S('cbic','vendas','BR')), cb_o=S('cbic','oferta','BR');
   const sbpe=roll12(S('abecip','sbpe_unid_total'));
   const ig=yoy(S('abecip','igmi_r','BR')), ivg=yoy(S('bcb_olinda','indices_ivg_r','BR'));
   const selic=S('bcb_sgs','selic_meta_m'), inad=S('bcb_olinda','credito_estoque_inadimplencia_pf_sfh','BR');
@@ -276,8 +278,8 @@ function viewVisao(root){
   g.append(tile({label:'Crédito imobiliário contratado (PF, todas as fontes) — acumulado 12 meses',value:L?fmtBRL(L[1]):'–',delta:diffPct(r12,12),ref:L?'até '+fmtYMlong(L[0])+' · BCB':'',hero:true,span:6}));
   g.append(tile({label:'Unidades financiadas SBPE — 12 meses',value:last(sbpe)?fmtNum(last(sbpe)[1]):'–',delta:diffPct(sbpe,12),ref:last(sbpe)?'até '+fmtYMlong(last(sbpe)[0])+' · ABECIP':''}));
   g.append(tile({label:'Selic (meta)',value:last(selic)?nf2.format(last(selic)[1])+'% a.a.':'–',delta:diffAbs(selic,12)!=null?fmtPct(diffAbs(selic,12),2).replace('%',' pp'):null,upGood:false,ref:last(selic)?fmtYMlong(last(selic)[0])+' · BCB':''}));
-  g.append(tile({label:'Lançamentos — 12 meses (amostra Abrainc, ~20 incorporadoras)',value:last(ab_l)?fmtNum(last(ab_l)[1])+' unid.':'–',delta:diffPct(ab_l,12),ref:last(ab_l)?'até '+fmtYMlong(last(ab_l)[0])+' · Abrainc-Fipe':''}));
-  g.append(tile({label:'Vendas — 12 meses (amostra Abrainc)',value:last(ab_v)?fmtNum(last(ab_v)[1])+' unid.':'–',delta:diffPct(ab_v,12),ref:last(ab_v)?'até '+fmtYMlong(last(ab_v)[0])+' · Abrainc-Fipe':''}));
+  g.append(tile({label:'Lançamentos residenciais — 12 meses (~220 cidades)',value:last(cb_l)?fmtNum(last(cb_l)[1])+' unid.':'–',delta:diffPct(cb_l,4),ref:last(cb_l)?'até '+fmtQ(last(cb_l)[0])+' · CBIC/CII':''}));
+  g.append(tile({label:'Vendas residenciais — 12 meses (~220 cidades)',value:last(cb_v)?fmtNum(last(cb_v)[1])+' unid.':'–',delta:diffPct(cb_v,4),ref:last(cb_v)?'até '+fmtQ(last(cb_v)[0])+' · CBIC/CII':''}));
   g.append(tile({label:'Preço de transação — IGMI-R Brasil (12 meses)',value:last(ig)?fmtPct(last(ig)[1]):'–',ref:last(ig)?fmtYMlong(last(ig)[0])+' · ABECIP/FGV':''}));
   g.append(tile({label:'Valor de garantia — IVG-R Brasil (12 meses)',value:last(ivg)?fmtPct(last(ivg)[1]):'–',ref:last(ivg)?fmtYMlong(last(ivg)[0])+' · BCB':''}));
   g.append(tile({label:'Inadimplência SFH (PF, Brasil)',value:last(inad)?nf2.format(last(inad)[1])+'%':'–',delta:diffAbs(inad,12)!=null?fmtPct(diffAbs(inad,12),2).replace('%',' pp'):null,upGood:false,ref:last(inad)?fmtYMlong(last(inad)[0])+' · BCB':''}));
@@ -286,8 +288,8 @@ function viewVisao(root){
   g.append(chartCard({title:'Crédito imobiliário contratado por fonte — PF, Brasil (R$, mensal)',note:'SFH = recursos de poupança (SBPE); FGTS = programas habitacionais; taxa de mercado = SFI/livre.',src:'BCB — Informações do Mercado Imobiliário',span:6,
     render:b=>barChart(b,{series:[{name:'SFH/SBPE',data:cut(cred[0])},{name:'FGTS',data:cut(cred[1])},{name:'Taxa de mercado',data:cut(cred[2])},{name:'Home equity',data:cut(cred[3])}],fmt:fmtBRL}),
     table:()=>[{name:'SFH',data:cred[0],fmt:fmtBRL},{name:'FGTS',data:cred[1],fmt:fmtBRL},{name:'Livre',data:cred[2],fmt:fmtBRL},{name:'Home equity',data:cred[3],fmt:fmtBRL}]}));
-  g.append(chartCard({title:'Lançamentos × vendas — acumulado 12 meses (amostra Abrainc-Fipe)',note:'~20 incorporadoras associadas; não é censo nacional. Vendas acima de lançamentos = estoque caindo.',src:'Abrainc-Fipe',span:6,
-    render:b=>lineChart(b,{series:[{name:'Lançamentos 12m',data:cut(ab_l)},{name:'Vendas 12m',data:cut(ab_v)}],fmt:fmtNum,labelEnd:true}),table:()=>[{name:'Lançamentos 12m',data:ab_l},{name:'Vendas 12m',data:ab_v}]}));
+  g.append(chartCard({title:'Lançamentos × vendas residenciais — trimestral, ~220 cidades (CBIC)',note:'Pesquisa CBIC/CII com a Brain: capitais, regiões metropolitanas e interior. Vendas acima de lançamentos = estoque caindo.',src:'CBIC/CII — Indicadores Imobiliários Nacionais',span:6,
+    render:b=>lineChart(b,{series:[{name:'Lançamentos',data:cut(S('cbic','lancamentos','BR'))},{name:'Vendas',data:cut(S('cbic','vendas','BR'))}],fmt:fmtNum,freq:'Q',labelEnd:true}),table:()=>[{name:'Lançamentos',data:S('cbic','lancamentos','BR')},{name:'Vendas',data:S('cbic','vendas','BR')},{name:'Oferta final',data:cb_o}]}));
   g.append(chartCard({title:'Preços de imóveis × inflação — variação em 12 meses, Brasil',note:'IGMI-R (ABECIP/FGV) e IVG-R (BCB) são índices de preço de transação, calculados sobre avaliações de imóveis efetivamente financiados.',src:'ABECIP/FGV; BCB; IBGE',span:12,
     render:b=>lineChart(b,{series:[{name:'IGMI-R',data:cut(ig)},{name:'IVG-R',data:cut(ivg)},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m')),color:'var(--muted)'}],fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
   root.append(g);
@@ -297,7 +299,18 @@ function mergeSum(list){ const m=new Map(); for(const s of list) for(const [d,v]
 function viewOferta(root){
   const g=el('div',{class:'grid'});
   const A=(k)=>S('abrainc',k);
-  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Não há censo nacional público de lançamentos/vendas. Abaixo, as duas melhores amostras abertas: <b>Abrainc-Fipe</b> (Brasil, ~20 grandes incorporadoras, viés MCMV) e <b>Secovi-SP</b> (cidade de São Paulo, associadas).</p>'}));
+  const CB=(k,r='BR')=>S('cbic',k,r); const REG=['Sudeste','Sul','Nordeste','Centro-Oeste','Norte'];
+  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Três leituras complementares: <b>CBIC/CII</b> (trimestral, ~220 cidades — a mais ampla), <b>Abrainc-Fipe</b> (mensal, ~20 grandes incorporadoras, viés MCMV) e <b>Secovi-SP</b> (mensal, cidade de São Paulo).</p>'}));
+  g.append(el('div',{class:'c12',html:'<h2 style="font-size:16px;margin:10px 0 -4px">Brasil, ~220 cidades — CBIC/CII (trimestral)</h2>'}));
+  g.append(chartCard({title:'Lançamentos × vendas residenciais (unidades/trimestre)',note:'Série emendada das apresentações trimestrais; a edição mais recente revisa os trimestres anteriores.',src:'CBIC/CII — Brain',render:b=>lineChart(b,{series:[{name:'Lançamentos',data:cut(CB('lancamentos'))},{name:'Vendas',data:cut(CB('vendas'))}],freq:'Q',labelEnd:true}),table:()=>[{name:'Lançamentos',data:CB('lancamentos')},{name:'Vendas',data:CB('vendas')},{name:'Oferta final',data:CB('oferta')}]}));
+  const cbO=CB('oferta'), cbV4=roll4(CB('vendas')); const cbMeses=cbO.filter(p=>cbV4.find(q=>q[0]===p[0])).map(p=>[p[0],p[1]/(cbV4.find(q=>q[0]===p[0])[1]/12)]);
+  g.append(chartCard({title:'Meses de estoque — oferta final ÷ média mensal de vendas (12 meses)',note:'Quanto tempo o estoque atual levaria para ser vendido no ritmo recente.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:[{name:'Meses de estoque',data:cut(cbMeses)}],fmt:v=>nf.format(v)+' m',freq:'Q',area:true,labelEnd:true})}));
+  g.append(chartCard({title:'Lançamentos por região (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:REG.map(r=>({name:r,data:cut(CB('lancamentos',r))})),freq:'Q'}),table:()=>REG.map(r=>({name:r,data:CB('lancamentos',r)}))}));
+  g.append(chartCard({title:'Vendas por região (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:REG.map(r=>({name:r,data:cut(CB('vendas',r))})),freq:'Q'}),table:()=>REG.map(r=>({name:r,data:CB('vendas',r)}))}));
+  g.append(chartCard({title:'Oferta final por região (unidades em estoque ao fim do trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:REG.map(r=>({name:r,data:cut(CB('oferta',r))})),freq:'Q'}),table:()=>REG.map(r=>({name:r,data:CB('oferta',r)}))}));
+  const cbVSO=CB('vendas').filter(p=>cbO.find(q=>q[0]===p[0])).map(p=>[p[0],p[1]/(p[1]+cbO.find(q=>q[0]===p[0])[1])*100]);
+  g.append(chartCard({title:'VSO trimestral — vendas ÷ (vendas + oferta final) (%)',note:'Aproximação: usa a oferta ao fim do trimestre como denominador.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:[{name:'VSO',data:cut(cbVSO)}],fmt:v=>nf.format(v)+'%',freq:'Q',area:true,labelEnd:true})}));
+  g.append(el('div',{class:'c12',html:'<h2 style="font-size:16px;margin:10px 0 -4px">Brasil, amostra Abrainc-Fipe (mensal, ~20 incorporadoras)</h2>'}));
   g.append(chartCard({title:'Lançamentos por segmento — Brasil, amostra Abrainc (unidades/mês)',src:'Abrainc-Fipe',render:b=>barChart(b,{series:[{name:'MCMV',data:cut(A('lancamentos_mcmv'))},{name:'Médio/alto padrão',data:cut(A('lancamentos_map'))},{name:'Outros',data:cut(A('lancamentos_outros'))}]}),table:()=>[{name:'MCMV',data:A('lancamentos_mcmv')},{name:'MAP',data:A('lancamentos_map')},{name:'Total',data:A('lancamentos_total')}]}));
   g.append(chartCard({title:'Vendas por segmento — Brasil, amostra Abrainc (unidades/mês)',src:'Abrainc-Fipe',render:b=>barChart(b,{series:[{name:'MCMV',data:cut(A('vendas_mcmv'))},{name:'Médio/alto padrão',data:cut(A('vendas_map'))},{name:'Outros',data:cut(A('vendas_outros'))}]}),table:()=>[{name:'MCMV',data:A('vendas_mcmv')},{name:'MAP',data:A('vendas_map')},{name:'Total',data:A('vendas_total')}]}));
   const of=A('oferta_total'), v12=roll12(A('vendas_total')); const meses=of.filter(p=>v12.find(q=>q[0]===p[0])).map(p=>[p[0],p[1]/(v12.find(q=>q[0]===p[0])[1]/12)]);
@@ -390,7 +403,7 @@ function viewImoveis(root){
 
 function viewFontes(root){
   const g=el('div',{class:'grid'});
-  const meta=PAYLOAD.meta; const order=['bcb_olinda','bcb_sgs','sidra','abecip','abrainc','secovi'];
+  const meta=PAYLOAD.meta; const order=['bcb_olinda','bcb_sgs','sidra','abecip','cbic','abrainc','secovi'];
   const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Fontes coletadas'),el('p',{class:'note'},'Cada fonte tem coletor próprio em painel/collectors/. Rode `python -m painel.collect` para atualizar e `python -m painel.build` para regenerar esta página.'));
   const t=el('table'); t.append(el('thead',{},el('tr',{},el('th',{},'Fonte'),el('th',{},'Cobertura'),el('th',{class:'n'},'Séries'),el('th',{class:'n'},'Linhas'),el('th',{},'Período'),el('th',{},'Coletado em'),el('th',{},'URL'))));
   const tb=el('tbody'); for(const k of order){ const m=meta[k]; if(!m) continue; const a=el('a',{href:m.url,target:'_blank',rel:'noopener'},m.url.replace(/^https?:\/\//,'').slice(0,48)); tb.append(el('tr',{},el('td',{},el('b',{},m.title||k)),el('td',{},m.coverage||''),el('td',{class:'n'},nf0.format(m.series)),el('td',{class:'n'},nf0.format(m.rows)),el('td',{},(m.first_date||'').slice(0,7)+' → '+(m.last_date||'').slice(0,7)),el('td',{},(m.collected_at||'').replace('T',' ').slice(0,16)),el('td',{},a))); }
@@ -399,7 +412,7 @@ function viewFontes(root){
   const t2=el('table'); t2.append(el('thead',{},el('tr',{},el('th',{},'Fonte'),el('th',{},'Série'),el('th',{},'Nome'),el('th',{},'Bloco'),el('th',{},'Unid.'),el('th',{class:'n'},'Regiões'),el('th',{},'Último dado'))));
   const tb2=el('tbody'); for(const src of Object.keys(D)) for(const [sid,e] of Object.entries(D[src])){ const regs=Object.keys(e.regions); const lastD=Math.max(...regs.map(r=>e.regions[r].length?e.regions[r][e.regions[r].length-1][0].replace('-',''):0)); tb2.append(el('tr',{},el('td',{},src),el('td',{},el('code',{},sid)),el('td',{},e.name),el('td',{},e.block),el('td',{},e.unit),el('td',{class:'n'},String(regs.length)),el('td',{},String(lastD).replace(/(\d{4})(\d{2})/,'$1-$2')))); }
   t2.append(tb2); c2.append(el('div',{class:'tablewrap'},t2)); g.append(c2);
-  const c3=el('div',{class:'card c12'}); c3.append(el('h3',{},'Limitações conhecidas'),el('ul',{html:'<li>Lançamentos/vendas/estoque: só amostras (Abrainc ≈ 20 incorporadoras; Secovi = cidade de SP). Não há censo nacional aberto.</li><li>BCB publica crédito em R$; o número de unidades vem só da ABECIP (SBPE) — FGTS em unidades depende do Ministério das Cidades (a implementar).</li><li>Séries de LCI/CRI/LIG do BCB terminam em fev/2025; substituir por B3/ANBIMA.</li><li>Secovi: alguns meses de 2024 não foram localizados no padrão de URL dos PDFs.</li><li>Preços: IGMI-R e IVG-R medem avaliações de imóveis financiados (não preço de escritura nem de anúncio); índices de oferta como o FipeZap foram deliberadamente deixados de fora.</li>'})); g.append(c3);
+  const c3=el('div',{class:'card c12'}); c3.append(el('h3',{},'Limitações conhecidas'),el('ul',{html:'<li>Lançamentos/vendas/estoque: a série mais ampla é a CBIC/CII (~220 cidades, trimestral), extraída das apresentações públicas das coletivas — cada edição revisa trimestres anteriores e a amostra de cidades cresce, então a série histórica é emendada. Abrainc (≈ 20 incorporadoras) e Secovi (cidade de SP) são amostras.</li><li>BCB publica crédito em R$; o número de unidades vem só da ABECIP (SBPE) — FGTS em unidades depende do Ministério das Cidades (a implementar).</li><li>Séries de LCI/CRI/LIG do BCB terminam em fev/2025; substituir por B3/ANBIMA.</li><li>Secovi: alguns meses de 2024 não foram localizados no padrão de URL dos PDFs.</li><li>Preços: IGMI-R e IVG-R medem avaliações de imóveis financiados (não preço de escritura nem de anúncio); índices de oferta como o FipeZap foram deliberadamente deixados de fora.</li>'})); g.append(c3);
   root.append(g);
 }
 
