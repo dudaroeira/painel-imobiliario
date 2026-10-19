@@ -33,6 +33,10 @@ METRICS = [  # (texto que identifica a página, series_id, nome)
 ]
 Q_RE = re.compile(r"\b([1-4])T\s?(\d{4}|\d{2})\b")
 INT_RE = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+|\d{1,3})(?![\d.,%])")
+# páginas "MCMV x Demais Padrões por trimestre": participação do MCMV em % inteiro, 9 trimestres
+QDASH_RE = re.compile(r"\b([1-4])T-(\d{2})\b")
+PCT_RE = re.compile(r"(?<![\d,+\-])(\d{1,2})%")
+MCMV_PAGES = {"Unidades Lançadas": "lancamentos", "Unidades Vendidas": "vendas", "Unidades em Oferta": "oferta"}
 
 
 def discover(refresh: bool) -> list[str]:
@@ -56,12 +60,37 @@ def _quarter_date(q: str, yy: str) -> str:
     return f"{year}-{(int(q) - 1) * 3 + 1:02d}-01"
 
 
+def _parse_mcmv_page(text: str) -> tuple[str, dict, int | None] | None:
+    """Página 'MCMV x Demais Padrões por trimestre' -> (metrica, {date: share_mcmv_%}, valor exato do último trimestre)."""
+    # a métrica vem do título ("Unidades Vendidas | 2T 2026"); o rodapé "Variação Unidades Lançadas"
+    # aparece por engano também na página de vendas, por isso só o trecho antes de "MCMV x Demais" conta
+    head = text.split("MCMV x Demais")[0]
+    metric = next((sid for key, sid in MCMV_PAGES.items() if key in head), None)
+    if not metric:
+        return None
+    qline = next((ln for ln in text.splitlines() if len(QDASH_RE.findall(ln)) >= 9), None)
+    if not qline:
+        return None
+    quarters = [_quarter_date(q, yy) for q, yy in QDASH_RE.findall(qline)[:9]]
+    body = text.split("Variação")[0]  # as linhas de variação trimestral vêm depois e têm % com sinal/decimal
+    shares = [int(p) for p in PCT_RE.findall(body)][:9]
+    if len(shares) < 9:
+        return None
+    # o valor absoluto impresso ("MCMV: 48.648") muda de posição entre edições; fica só a participação
+    return metric, dict(zip(quarters, shares)), None
+
+
 def parse(pdf: bytes) -> tuple[dict, str]:
     """Devolve ({(series_id, region, date): valor}, trimestre_mais_recente)."""
-    out, latest = {}, ""
+    out, latest, mcmv = {}, "", []
     with pdfplumber.open(io.BytesIO(pdf)) as doc:
         for pg in doc.pages:
             text = pg.extract_text() or ""
+            if "Demais Padrões por trimestre" in text:
+                r = _parse_mcmv_page(text)
+                if r:
+                    mcmv.append(r)
+                continue
             if "Região" not in text or "TOTAL" not in text:
                 continue
             metric = next(((sid, nm) for key, sid, nm in METRICS if key.lower() in text.lower()), None)
@@ -87,6 +116,16 @@ def parse(pdf: bytes) -> tuple[dict, str]:
                 for d, v in zip(quarters, nums):
                     out[(metric[0], REGIONS[name], d)] = v
                     latest = max(latest, d)
+    # MCMV × demais padrões (Brasil): participação publicada em % inteiro × total do trimestre
+    for metric, shares, _ in mcmv:
+        for d, share in shares.items():
+            total = out.get((metric, "BR", d))
+            if total is None:
+                continue
+            v = round(total * share / 100)
+            out[(f"{metric}_mcmv", "BR", d)] = v
+            out[(f"{metric}_demais", "BR", d)] = total - v
+            out[(f"{metric}_mcmv_share", "BR", d)] = v / total * 100
     return out, latest
 
 
@@ -105,7 +144,13 @@ def collect(refresh: bool = True):
     for _, name, vals in sorted(order, key=lambda t: t[0]):
         merged.update(vals)
     names = {sid: nm for _, sid, nm in METRICS}
-    rows = [dict(source="cbic", series_id=sid, name=names[sid], block="oferta", region=reg, unit="unidades", freq="Q", date=d, value=v)
+    label = {"lancamentos": "Lançamentos", "vendas": "Vendas", "oferta": "Oferta final"}
+    for base, lb in label.items():
+        names[f"{base}_mcmv"] = f"{lb} — MCMV (CBIC)"
+        names[f"{base}_demais"] = f"{lb} — demais padrões (CBIC)"
+        names[f"{base}_mcmv_share"] = f"{lb} — participação do MCMV (CBIC)"
+    rows = [dict(source="cbic", series_id=sid, name=names[sid], block="oferta", region=reg,
+                 unit="%" if sid.endswith("_share") else "unidades", freq="Q", date=d, value=v)
             for (sid, reg, d), v in merged.items()]
     df = store.frame(rows)
     store.save(df, "cbic", {"url": "https://cbic.org.br/hubdedados/mercado", "title": "CBIC/CII — Indicadores Imobiliários Nacionais",
