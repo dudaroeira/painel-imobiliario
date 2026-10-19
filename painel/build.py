@@ -84,7 +84,8 @@ def main():
     sel = select(df)
     payload = {
         "built_at": dt.datetime.now().strftime("%d/%m/%Y %H:%M"),
-        "meta": store.load_meta(),
+        # só fontes do painel: no CI o cache pode restaurar metadados de fontes já retiradas
+        "meta": {k: v for k, v in store.load_meta().items() if k in SELECT},
         "data": pack(sel),
     }
     html = TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/", json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
