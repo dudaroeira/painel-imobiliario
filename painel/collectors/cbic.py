@@ -33,7 +33,8 @@ METRICS = [  # (texto que identifica a página, series_id, nome)
 ]
 Q_RE = re.compile(r"\b([1-4])T\s?(\d{4}|\d{2})\b")
 INT_RE = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+|\d{1,3})(?![\d.,%])")
-# páginas "MCMV x Demais Padrões por trimestre": participação do MCMV em % inteiro, 9 trimestres
+# páginas "MCMV x Demais Padrões por trimestre": participação do MCMV em % inteiro, 9 trimestres.
+# No painel, "demais padrões" é chamado de MAP (médio e alto padrões).
 QDASH_RE = re.compile(r"\b([1-4])T-(\d{2})\b")
 PCT_RE = re.compile(r"(?<![\d,+\-])(\d{1,2})%")
 MCMV_PAGES = {"Unidades Lançadas": "lancamentos", "Unidades Vendidas": "vendas", "Unidades em Oferta": "oferta"}
@@ -124,7 +125,7 @@ def parse(pdf: bytes) -> tuple[dict, str]:
                 continue
             v = round(total * share / 100)
             out[(f"{metric}_mcmv", "BR", d)] = v
-            out[(f"{metric}_demais", "BR", d)] = total - v
+            out[(f"{metric}_map", "BR", d)] = total - v  # MAP = médio e alto padrões = tudo que não é MCMV
             out[(f"{metric}_mcmv_share", "BR", d)] = v / total * 100
     return out, latest
 
@@ -147,7 +148,7 @@ def collect(refresh: bool = True):
     label = {"lancamentos": "Lançamentos", "vendas": "Vendas", "oferta": "Oferta final"}
     for base, lb in label.items():
         names[f"{base}_mcmv"] = f"{lb} — MCMV (CBIC)"
-        names[f"{base}_demais"] = f"{lb} — demais padrões (CBIC)"
+        names[f"{base}_map"] = f"{lb} — MAP, médio e alto padrões (CBIC)"
         names[f"{base}_mcmv_share"] = f"{lb} — participação do MCMV (CBIC)"
     rows = [dict(source="cbic", series_id=sid, name=names[sid], block="oferta", region=reg,
                  unit="%" if sid.endswith("_share") else "unidades", freq="Q", date=d, value=v)

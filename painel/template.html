@@ -267,7 +267,7 @@ function section(id,label){ return {id,label}; }
 
 // ---------- views ----------
 const VIEWS=[
-  section('visao','Visão geral'), section('ciclo','Ciclo'), section('mcmv','MCMV × demais'), section('oferta','Oferta primária'), section('credito','Crédito'), section('funding','Funding'),
+  section('visao','Visão geral'), section('ciclo','Ciclo'), section('mcmv','MCMV × MAP'), section('oferta','Oferta primária'), section('credito','Crédito'), section('funding','Funding'),
   section('precos','Preços'), section('custos','Custos & macro'), section('imoveis','Perfil dos imóveis'), section('fontes','Fontes & catálogo')
 ];
 
@@ -418,7 +418,7 @@ function viewFontes(root){
   const t2=el('table'); t2.append(el('thead',{},el('tr',{},el('th',{},'Fonte'),el('th',{},'Série'),el('th',{},'Nome'),el('th',{},'Bloco'),el('th',{},'Unid.'),el('th',{class:'n'},'Regiões'),el('th',{},'Último dado'))));
   const tb2=el('tbody'); for(const src of Object.keys(D)) for(const [sid,e] of Object.entries(D[src])){ const regs=Object.keys(e.regions); const lastD=Math.max(...regs.map(r=>e.regions[r].length?e.regions[r][e.regions[r].length-1][0].replace('-',''):0)); tb2.append(el('tr',{},el('td',{},src),el('td',{},el('code',{},sid)),el('td',{},e.name),el('td',{},e.block),el('td',{},e.unit),el('td',{class:'n'},String(regs.length)),el('td',{},String(lastD).replace(/(\d{4})(\d{2})/,'$1-$2')))); }
   t2.append(tb2); c2.append(el('div',{class:'tablewrap'},t2)); g.append(c2);
-  const c3=el('div',{class:'card c12'}); c3.append(el('h3',{},'Limitações conhecidas'),el('ul',{html:'<li>Lançamentos/vendas/estoque: a série mais ampla é a CBIC/CII (~220 cidades, trimestral), extraída das apresentações públicas das coletivas — cada edição revisa trimestres anteriores e a amostra de cidades cresce, então a série histórica é emendada. Abrainc (≈ 20 incorporadoras) e Secovi (cidade de SP) são amostras.</li><li>BCB publica crédito em R$; o número de unidades vem só da ABECIP (SBPE) — FGTS em unidades depende do Ministério das Cidades (a implementar).</li><li>Séries de LCI/CRI/LIG do BCB terminam em fev/2025; substituir por B3/ANBIMA.</li><li>Secovi: alguns meses de 2024 não foram localizados no padrão de URL dos PDFs.</li><li>Preços: IGMI-R e IVG-R medem avaliações de imóveis financiados (não preço de escritura nem de anúncio); índices de oferta como o FipeZap foram deliberadamente deixados de fora.</li>'})); g.append(c3);
+  const c3=el('div',{class:'card c12'}); c3.append(el('h3',{},'Limitações conhecidas'),el('ul',{html:'<li>Lançamentos/vendas/estoque: a série mais ampla é a CBIC/CII (~220 cidades, trimestral), extraída das apresentações públicas das coletivas — cada edição revisa trimestres anteriores e a amostra de cidades cresce, então a série histórica é emendada. Abrainc (≈ 20 incorporadoras) e Secovi (cidade de SP) são amostras.</li><li>Segmentos: em todo o painel, <b>MAP</b> (médio e alto padrões) significa tudo que não é MCMV — é o que a CBIC chama de "demais padrões". A participação do MCMV é publicada em % inteiro, por isso as unidades por segmento são estimadas (±0,5% do total).</li><li>BCB publica crédito em R$; o número de unidades vem só da ABECIP (SBPE) — FGTS em unidades depende do Ministério das Cidades (a implementar).</li><li>Séries de LCI/CRI/LIG do BCB terminam em fev/2025; substituir por B3/ANBIMA.</li><li>Secovi: alguns meses de 2024 não foram localizados no padrão de URL dos PDFs.</li><li>Preços: IGMI-R e IVG-R medem avaliações de imóveis financiados (não preço de escritura nem de anúncio); índices de oferta como o FipeZap foram deliberadamente deixados de fora.</li>'})); g.append(c3);
   root.append(g);
 }
 
@@ -465,40 +465,85 @@ function ciclo(){
   return out;
 }
 
-function viewCiclo(root){
-  const g=el('div',{class:'grid'}); const K=ciclo(); const SG=segMetrics();
-  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Indicadores <b>derivados</b> das séries do painel para ler a fase do ciclo imobiliário. Faixas de leitura são regras de bolso, não previsões; cada linha diz como foi calculada.</p>'}));
-  // ---- semáforo
-  const rows=[
-    ['Juro real ex-ante','Selic meta − IPCA 12m',K.juroReal,v=>nf2.format(v)+' pp',status(last(K.juroReal)?.[1],[4,7]),'< 4 pp favorável · > 7 pp desfavorável','antecede vendas de médio/alto padrão em 2–4 trimestres'],
-    ['Spread SBPE − Selic','taxa média SFH (PF) − Selic meta',K.spread,v=>nf2.format(v)+' pp',status(last(K.spread)?.[1],[1,0],false),'> 1 pp favorável · < 0 desfavorável','negativo = bancos subsidiando com poupança; insustentável se a poupança sair'],
-    ['Absorção líquida 12m','vendas − lançamentos (CBIC, 4 trimestres), % das vendas',K.absorcaoPct,v=>fmtPct(v),status(last(K.absorcaoPct)?.[1],[0,-5],false),'> 0 favorável · < −5% desfavorável','positivo = estoque caindo'],
-    ['Taxa de reposição','lançamentos ÷ vendas (CBIC, 12m)',K.reposicao,v=>nf2.format(v)+'×',status(Math.abs((last(K.reposicao)?.[1]||1)-1),[0.1,0.25]),'0,9–1,1 equilíbrio · > 1,25 excesso de lançamentos','acima de 1 por vários trimestres gera estoque em 18–24 meses'],
-    ['Meses de estoque','oferta final ÷ média mensal de vendas 12m (CBIC)',K.mesesEstoque,v=>nf.format(v)+' m',status(last(K.mesesEstoque)?.[1],[8,14]),'< 8 aquecido · > 14 saturado',''],
-    ['Meses de estoque — MCMV','idem, só Minha Casa Minha Vida (CBIC)',SG.mcmv.meses,v=>nf.format(v)+' m',status(last(SG.mcmv.meses)?.[1],[8,14]),'< 8 aquecido · > 14 saturado','segmento de giro rápido: acima de 10 já é sinal de excesso'],
-    ['Meses de estoque — demais padrões','idem, médio e alto padrão (CBIC)',SG.demais.meses,v=>nf.format(v)+' m',status(last(SG.demais.meses)?.[1],[10,16]),'< 10 aquecido · > 16 saturado','segmento sensível a juros; estoque mais alto é estrutural'],
-    ['Absorção líquida 12m — MCMV','vendas − lançamentos MCMV, % das vendas (CBIC)',SG.mcmv.absorcao,v=>fmtPct(v),status(last(SG.mcmv.absorcao)?.[1],[0,-5],false),'> 0 favorável · < −5% desfavorável',''],
-    ['Absorção líquida 12m — demais padrões','vendas − lançamentos demais padrões, % das vendas (CBIC)',SG.demais.absorcao,v=>fmtPct(v),status(last(SG.demais.absorcao)?.[1],[0,-5],false),'> 0 favorável · < −5% desfavorável',''],
-    ['Distratos / vendas','Abrainc, mensal',K.distratos,v=>nf.format(v)+'%',status(last(K.distratos)?.[1],[10,15]),'< 10% favorável · > 15% desfavorável','estresse do comprador na chave'],
-    ['Preço ÷ custo (var. 12m)','IGMI-R ÷ INCC-DI encadeado, variação em 12 meses',K.precoCustoYoy,v=>fmtPct(v),status(last(K.precoCustoYoy)?.[1],[0,-3],false),'> 0 margem abrindo · < −3% margem fechando','preço abaixo do custo antecede queda de lançamentos'],
-    ['Prestação real do imóvel mediano','MVG-R × LTV SFH, taxa SFH, 360 meses, R$ de hoje',K.prestacaoReal,v=>fmtBRL(v)+'/mês',status(diffPct(K.prestacaoReal,12),[0,10]),'var. 12m < 0 favorável · > 10% desfavorável','acessibilidade: quanto custa financiar o imóvel típico'],
-    ['Dependência do FGTS','contratações FGTS ÷ total PF (12m)',K.shareFgts,v=>nf.format(v)+'%',status(last(K.shareFgts)?.[1],[40,50]),'< 40% favorável · > 50% dependente de política pública',''],
-    ['Cobertura da carteira pela poupança','carteira SFH (PF) ÷ saldo SBPE',K.cobertura,v=>nf.format(v)+'%',status(last(K.cobertura)?.[1],[75,90]),'< 75% folga · > 90% funding esgotando',''],
-    ['Inadimplência SFH','BCB, PF, > 90 dias',K.inad,v=>nf2.format(v)+'%',status(last(K.inad)?.[1],[1.5,2.5]),'< 1,5% favorável · > 2,5% desfavorável',''],
-  ];
-  const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Semáforo do ciclo'),el('p',{class:'note'},'Valor mais recente de cada indicador, sua leitura e a variação em 12 meses. Verde/amarelo/vermelho sempre acompanhados do rótulo.'));
+// ---------- segmentos CBIC: MCMV × MAP (médio e alto padrões = tudo que não é MCMV) ----------
+const SEG=[['mcmv','MCMV'],['map','MAP (médio e alto padrões)']];
+const SEG_SHORT={mcmv:'MCMV',map:'MAP'};
+function segMetrics(){
+  const CB=k=>S('cbic',k,'BR'); const o={};
+  for(const [k,nm] of SEG){
+    const L=CB(`lancamentos_${k}`), V=CB(`vendas_${k}`), O=CB(`oferta_${k}`);
+    o[k]={name:nm, L, V, O,
+      meses: join(O,roll4(V),(of,v)=>of/(v/12)),
+      absorcao: join(join(roll4(V),roll4(L),(v,l)=>v-l),roll4(V),(a,v)=>a/v*100),
+      reposicao: join(roll4(L),roll4(V),(l,v)=>l/v),
+      vso: join(V,O,(v,of)=>v/(v+of)*100),
+      vso12: join(roll4(V),O,(v,of)=>v/(v+of)*100),
+      yoyL: yoy(roll4(L)), yoyV: yoy(roll4(V))};
+  }
+  o.share={L:CB('lancamentos_mcmv_share'),V:CB('vendas_mcmv_share'),O:CB('oferta_mcmv_share')};
+  o.total={vso: join(CB('vendas'),CB('oferta'),(v,of)=>v/(v+of)*100)};
+  return o;
+}
+
+/* semTable: linhas [nome, cálculo, série, formatador, status, referência, porquê, trimestral?] */
+function semCard(title, note, rows, span=12){
+  const card=el('div',{class:`card c${span}`}); card.append(el('h3',{},title)); if(note) card.append(el('p',{class:'note'},note));
   const t=el('table',{class:'sem'}); t.append(el('thead',{},el('tr',{},el('th',{},'Indicador'),el('th',{class:'n'},'Atual'),el('th',{},'Leitura'),el('th',{class:'n'},'12 meses antes'),el('th',{},'Referência / cálculo'))));
   const tb=el('tbody');
-  for(const [nm,calc,s,f,st,ref,why] of rows){ const L=last(s); const isQ = !!(L && L[0].length===7 && [K.absorcaoPct,K.reposicao,K.mesesEstoque,SG.mcmv.meses,SG.demais.meses,SG.mcmv.absorcao,SG.demais.absorcao].includes(s)); const pv = isQ ? (s.length>4?s[s.length-5]:null) : (s.length>12?s[s.length-13]:null);
+  for(const [nm,calc,s,f,st,ref,why,isQ] of rows){ const L=last(s); const pv = isQ ? (s.length>4?s[s.length-5]:null) : (s.length>12?s[s.length-13]:null);
     const when = L ? ' · ' + (isQ ? fmtQ(L[0]) : fmtYMlong(L[0])) : '';
     const tdName = el('td', {}, el('b', {}, nm), el('div', {class: 'ref'}, calc + when));
     const tdRef = el('td', {}, el('div', {}, ref), why ? el('div', {class: 'ref'}, why) : null);
     const tr = el('tr'); tr.append(tdName, el('td', {class: 'n'}, L ? f(L[1]) : '–'), el('td', {}, stPill(st)), el('td', {class: 'n'}, pv ? f(pv[1]) : '–'), tdRef); tb.append(tr); }
-  t.append(tb); card.append(el('div',{class:'tablewrap'},t)); g.append(card);
-  // ---- gráficos
-  g.append(chartCard({title:'Juro real ex-ante e spread SBPE − Selic (pp)',note:'Juro real alto trava o médio/alto padrão; spread negativo mostra o SBPE sendo vendido abaixo do custo de oportunidade.',src:'BCB; IBGE',render:b=>lineChart(b,{series:[{name:'Juro real (Selic − IPCA 12m)',data:cut(K.juroReal)},{name:'Spread SFH − Selic',data:cut(K.spread)}],fmt:v=>nf2.format(v)+' pp',labelEnd:true})}));
-  g.append(chartCard({title:'Absorção líquida e taxa de reposição — Brasil, ~220 cidades',note:'Absorção = vendas − lançamentos (12m, % das vendas). Reposição = lançamentos ÷ vendas (12m).',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:[{name:'Absorção líquida 12m (% vendas)',data:cut(K.absorcaoPct)}],fmt:v=>fmtPct(v),freq:'Q',area:true,labelEnd:true}),table:()=>[{name:'Absorção 12m (unid.)',data:K.absorcao12},{name:'Reposição (×)',data:K.reposicao,fmt:v=>nf2.format(v)}]}));
-  g.append(chartCard({title:'Meses de estoque por região (CBIC)',note:'Oferta final ÷ média mensal de vendas dos últimos 12 meses. Regra de bolso: < 8 aquecido, > 14 saturado.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:K.mesesRegiao.map(s=>({name:s.name,data:cut(s.data)})),fmt:v=>nf.format(v)+' m',freq:'Q',labelEnd:true})}));
+  t.append(tb); card.append(el('div',{class:'tablewrap'},t)); return card;
+}
+const lv = s => last(s)?.[1];
+function segRows(m, k){
+  // faixas diferentes por segmento: o MCMV gira rápido (subsídio + demanda reprimida); o MAP carrega estoque estrutural e é sensível a juros
+  const th = k==='mcmv' ? {meses:[8,11], vso:[12,9], repo:[0.1,0.2]} : {meses:[10,16], vso:[9,6], repo:[0.1,0.25]};
+  const sh = k==='mcmv' ? m.share : null;
+  const rows=[
+    ['Meses de estoque','oferta final ÷ média mensal de vendas 12m',m.meses,v=>nf.format(v)+' m',status(lv(m.meses),th.meses),`< ${th.meses[0]} aquecido · > ${th.meses[1]} saturado`,'',true],
+    ['VSO trimestral','vendas ÷ (vendas + oferta final)',m.vso,v=>nf.format(v)+'%',status(lv(m.vso),th.vso,false),`> ${th.vso[0]}% favorável · < ${th.vso[1]}% desfavorável`,'velocidade de vendas sobre a oferta do segmento',true],
+    ['Absorção líquida 12m','vendas − lançamentos (4 trimestres), % das vendas',m.absorcao,v=>fmtPct(v),status(lv(m.absorcao),[0,-5],false),'> 0 favorável · < −5% desfavorável','positivo = estoque do segmento caindo',true],
+    ['Taxa de reposição','lançamentos ÷ vendas (12m)',m.reposicao,v=>nf2.format(v)+'×',status(Math.abs((lv(m.reposicao)||1)-1),th.repo),`0,9–1,1 equilíbrio · > ${(1+th.repo[1]).toFixed(2).replace('.',',')} excesso de lançamentos`,'',true],
+    ['Lançamentos 12m (var. anual)','soma de 4 trimestres vs. mesmo período do ano anterior',m.yoyL,v=>fmtPct(v),status(Math.abs(lv(m.yoyL)||0),[10,25]),'variação até ±10% estável · > 25% ciclo acelerando/freando','',true],
+    ['Vendas 12m (var. anual)','soma de 4 trimestres vs. mesmo período do ano anterior',m.yoyV,v=>fmtPct(v),status(lv(m.yoyV),[0,-5],false),'> 0 favorável · < −5% desfavorável','',true],
+  ];
+  if(sh) rows.push(['Participação nos lançamentos','MCMV ÷ total do trimestre',sh.L,v=>nf.format(v)+'%',status(lv(sh.L),[50,60]),'< 50% favorável · > 60% mercado dependente do programa','recorde da série (2019–) em 2T/26',true]);
+  return rows;
+}
+
+function viewCiclo(root){
+  const g=el('div',{class:'grid'}); const K=ciclo(); const SG=segMetrics();
+  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Indicadores <b>derivados</b> das séries do painel para ler a fase do ciclo imobiliário, sempre apartando <b>MCMV</b> de <b>MAP</b> (médio e alto padrões = tudo que não é Minha Casa Minha Vida). Faixas de leitura são regras de bolso, não previsões; cada linha diz como foi calculada.</p>'}));
+  // ---- semáforo do mercado como um todo
+  const rows=[
+    ['Juro real ex-ante','Selic meta − IPCA 12m',K.juroReal,v=>nf2.format(v)+' pp',status(lv(K.juroReal),[4,7]),'< 4 pp favorável · > 7 pp desfavorável','antecede vendas de MAP em 2–4 trimestres',false],
+    ['Spread SBPE − Selic','taxa média SFH (PF) − Selic meta',K.spread,v=>nf2.format(v)+' pp',status(lv(K.spread),[1,0],false),'> 1 pp favorável · < 0 desfavorável','negativo = bancos subsidiando com poupança; insustentável se a poupança sair',false],
+    ['Absorção líquida 12m','vendas − lançamentos (CBIC, 4 trimestres), % das vendas',K.absorcaoPct,v=>fmtPct(v),status(lv(K.absorcaoPct),[0,-5],false),'> 0 favorável · < −5% desfavorável','positivo = estoque caindo',true],
+    ['Taxa de reposição','lançamentos ÷ vendas (CBIC, 12m)',K.reposicao,v=>nf2.format(v)+'×',status(Math.abs((lv(K.reposicao)||1)-1),[0.1,0.25]),'0,9–1,1 equilíbrio · > 1,25 excesso de lançamentos','acima de 1 por vários trimestres gera estoque em 18–24 meses',true],
+    ['Meses de estoque','oferta final ÷ média mensal de vendas 12m (CBIC)',K.mesesEstoque,v=>nf.format(v)+' m',status(lv(K.mesesEstoque),[8,14]),'< 8 aquecido · > 14 saturado','',true],
+    ['VSO trimestral','vendas ÷ (vendas + oferta final) (CBIC)',SG.total.vso,v=>nf.format(v)+'%',status(lv(SG.total.vso),[10,7],false),'> 10% favorável · < 7% desfavorável','',true],
+    ['Distratos / vendas','Abrainc, mensal (amostra ~20 incorporadoras)',K.distratos,v=>nf.format(v)+'%',status(lv(K.distratos),[10,15]),'< 10% favorável · > 15% desfavorável','estresse do comprador na chave',false],
+    ['Preço ÷ custo (var. 12m)','IGMI-R ÷ INCC-DI encadeado, variação em 12 meses',K.precoCustoYoy,v=>fmtPct(v),status(lv(K.precoCustoYoy),[0,-3],false),'> 0 margem abrindo · < −3% margem fechando','preço abaixo do custo antecede queda de lançamentos',false],
+    ['Prestação real do imóvel mediano','MVG-R × LTV SFH, taxa SFH, 360 meses, R$ de hoje',K.prestacaoReal,v=>fmtBRL(v)+'/mês',status(diffPct(K.prestacaoReal,12),[0,10]),'var. 12m < 0 favorável · > 10% desfavorável','acessibilidade: quanto custa financiar o imóvel típico',false],
+    ['Dependência do FGTS','contratações FGTS ÷ total PF (12m)',K.shareFgts,v=>nf.format(v)+'%',status(lv(K.shareFgts),[40,50]),'< 40% favorável · > 50% dependente de política pública','',false],
+    ['Cobertura da carteira pela poupança','carteira SFH (PF) ÷ saldo SBPE',K.cobertura,v=>nf.format(v)+'%',status(lv(K.cobertura),[75,90]),'< 75% folga · > 90% funding esgotando','',false],
+    ['Inadimplência SFH','BCB, PF, > 90 dias',K.inad,v=>nf2.format(v)+'%',status(lv(K.inad),[1.5,2.5]),'< 1,5% favorável · > 2,5% desfavorável','',false],
+  ];
+  g.append(semCard('Semáforo — mercado total','Valor mais recente de cada indicador, sua leitura e o valor de 12 meses antes. Verde/amarelo/vermelho sempre acompanhados do rótulo.',rows));
+  g.append(semCard('Semáforo — MCMV','Minha Casa Minha Vida, Brasil (~220 cidades, CBIC/CII). Faixas calibradas para um segmento de giro rápido.',segRows(SG.mcmv,'mcmv'),6));
+  g.append(semCard('Semáforo — MAP (médio e alto padrões)','Tudo que não é MCMV, Brasil (~220 cidades, CBIC/CII). Faixas calibradas para um segmento sensível a juros e com estoque estrutural maior.',segRows(SG.map,'map'),6));
+  // ---- gráficos por segmento
+  const pair=(f)=>SEG.map(([k,nm])=>({name:SEG_SHORT[k],data:cut(f(SG[k]))}));
+  g.append(chartCard({title:'VSO trimestral — MCMV × MAP × total (%)',note:'Vendas do trimestre ÷ (vendas + oferta final ao fim do trimestre).',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:[...pair(m=>m.vso),{name:'Total',data:cut(SG.total.vso),color:'var(--muted)'}],fmt:v=>nf.format(v)+'%',freq:'Q',labelEnd:true}),table:()=>[...SEG.map(([k,nm])=>({name:nm,data:SG[k].vso,fmt:v=>nf.format(v)+'%'})),{name:'Total',data:SG.total.vso,fmt:v=>nf.format(v)+'%'}]}));
+  g.append(chartCard({title:'Meses de estoque — MCMV × MAP',note:'Oferta final ÷ média mensal de vendas dos últimos 12 meses.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.meses),fmt:v=>nf.format(v)+' m',freq:'Q',labelEnd:true})}));
+  g.append(chartCard({title:'Absorção líquida 12m — MCMV × MAP (% das vendas)',note:'Vendas − lançamentos nos últimos 4 trimestres. Positivo = estoque do segmento caindo.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.absorcao),fmt:v=>fmtPct(v),freq:'Q',labelEnd:true})}));
+  g.append(chartCard({title:'Vendas 12 meses — variação anual, MCMV × MAP (%)',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.yoyV),fmt:v=>fmtPct(v),freq:'Q',labelEnd:true})}));
+  // ---- gráficos do mercado total
+  g.append(chartCard({title:'Juro real ex-ante e spread SBPE − Selic (pp)',note:'Juro real alto trava o MAP; spread negativo mostra o SBPE sendo vendido abaixo do custo de oportunidade.',src:'BCB; IBGE',render:b=>lineChart(b,{series:[{name:'Juro real (Selic − IPCA 12m)',data:cut(K.juroReal)},{name:'Spread SFH − Selic',data:cut(K.spread)}],fmt:v=>nf2.format(v)+' pp',labelEnd:true})}));
+  g.append(chartCard({title:'Meses de estoque por região (CBIC, total)',note:'Oferta final ÷ média mensal de vendas dos últimos 12 meses. Regra de bolso: < 8 aquecido, > 14 saturado.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:K.mesesRegiao.map(s=>({name:s.name,data:cut(s.data)})),fmt:v=>nf.format(v)+' m',freq:'Q',labelEnd:true})}));
   g.append(chartCard({title:'Preço ÷ custo de construção (IGMI-R ÷ INCC-DI, jan/2014 = 100)',note:'Proxy da margem da incorporação: sobe quando o preço de venda corre à frente do custo de obra.',src:'ABECIP/FGV; FGV via BCB',render:b=>lineChart(b,{series:[{name:'Preço ÷ custo',data:cut(K.precoCusto)}],fmt:v=>nf.format(v),zero:false,area:true,labelEnd:true})}));
   g.append(chartCard({title:'Prestação do imóvel mediano financiado — R$ de hoje',note:'Imóvel = mediana de garantia (MVG-R); financia-se o LTV médio do SFH à taxa média do mês, 360 meses (Price). Deflacionado pelo IPCA.',src:'cálculo sobre BCB; IBGE',render:b=>lineChart(b,{series:[{name:'Prestação real',data:cut(K.prestacaoReal)},{name:'Prestação nominal',data:cut(K.prestacaoNom),color:'var(--muted)'}],fmt:fmtBRL,zero:false,labelEnd:true})}));
   g.append(chartCard({title:'Ticket médio financiado no SBPE (R$ por unidade)',src:'ABECIP',render:b=>lineChart(b,{series:[{name:'Ticket SBPE',data:cut(K.ticket)}],fmt:fmtBRL,zero:false,area:true,labelEnd:true})}));
@@ -507,32 +552,20 @@ function viewCiclo(root){
   root.append(g);
 }
 
-// ---------- MCMV × demais padrões (CBIC) ----------
-const SEG=[['mcmv','MCMV'],['demais','Demais padrões']];
-function segMetrics(){
-  const CB=k=>S('cbic',k,'BR'); const o={};
-  for(const [k,nm] of SEG){
-    const L=CB(`lancamentos_${k}`), V=CB(`vendas_${k}`), O=CB(`oferta_${k}`);
-    o[k]={name:nm, L, V, O,
-      meses: join(O,roll4(V),(of,v)=>of/(v/12)),
-      absorcao: join(join(roll4(V),roll4(L),(v,l)=>v-l),roll4(V),(a,v)=>a/v*100),
-      reposicao: join(roll4(L),roll4(V),(l,v)=>l/v)};
-  }
-  o.share={L:CB('lancamentos_mcmv_share'),V:CB('vendas_mcmv_share'),O:CB('oferta_mcmv_share')};
-  return o;
-}
 function viewMcmv(root){
-  const g=el('div',{class:'grid'}); const M=segMetrics(); const pair=(f)=>SEG.map(([k,nm])=>({name:nm,data:cut(f(M[k]))}));
-  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Fonte única: <b>CBIC/CII — Indicadores Imobiliários Nacionais</b> (~220 cidades, trimestral). "Demais padrões" = tudo que não é Minha Casa Minha Vida (médio e alto padrão). A CBIC publica a participação do MCMV em % inteiro; as unidades por segmento são estimadas aplicando essa participação ao total do trimestre (erro de até ±0,5% do total).</p>'}));
-  g.append(chartCard({title:'Lançamentos por segmento (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:pair(m=>m.L),freq:'Q'}),table:()=>SEG.map(([k,nm])=>({name:nm,data:M[k].L}))}));
-  g.append(chartCard({title:'Vendas por segmento (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:pair(m=>m.V),freq:'Q'}),table:()=>SEG.map(([k,nm])=>({name:nm,data:M[k].V}))}));
-  g.append(chartCard({title:'Oferta final por segmento (unidades em estoque)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:pair(m=>m.O),freq:'Q'}),table:()=>SEG.map(([k,nm])=>({name:nm,data:M[k].O}))}));
+  const g=el('div',{class:'grid'}); const M=segMetrics(); const pair=(f)=>SEG.map(([k,nm])=>({name:SEG_SHORT[k],data:cut(f(M[k]))}));
+  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Fonte única: <b>CBIC/CII — Indicadores Imobiliários Nacionais</b> (~220 cidades, trimestral). <b>MAP</b> = médio e alto padrões = tudo que não é Minha Casa Minha Vida. A CBIC publica a participação do MCMV em % inteiro; as unidades por segmento são estimadas aplicando essa participação ao total do trimestre (erro de até ±0,5% do total).</p>'}));
+  g.append(chartCard({title:'Lançamentos — MCMV × MAP (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:pair(m=>m.L),freq:'Q'}),table:()=>SEG.map(([k,nm])=>({name:nm,data:M[k].L}))}));
+  g.append(chartCard({title:'Vendas — MCMV × MAP (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:pair(m=>m.V),freq:'Q'}),table:()=>SEG.map(([k,nm])=>({name:nm,data:M[k].V}))}));
+  g.append(chartCard({title:'Oferta final — MCMV × MAP (unidades em estoque)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:pair(m=>m.O),freq:'Q'}),table:()=>SEG.map(([k,nm])=>({name:nm,data:M[k].O}))}));
+  g.append(chartCard({title:'VSO trimestral — MCMV × MAP (%)',note:'Vendas do trimestre ÷ (vendas + oferta final). Mede a velocidade com que cada segmento escoa sua oferta.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:[...pair(m=>m.vso),{name:'Total',data:cut(M.total.vso),color:'var(--muted)'}],fmt:v=>nf.format(v)+'%',freq:'Q',labelEnd:true}),table:()=>[...SEG.map(([k,nm])=>({name:nm,data:M[k].vso,fmt:v=>nf.format(v)+'%'})),{name:'Total',data:M.total.vso,fmt:v=>nf.format(v)+'%'}]}));
+  g.append(chartCard({title:'VSO 12 meses — MCMV × MAP (%)',note:'Vendas dos últimos 4 trimestres ÷ (vendas 12m + oferta final). Comparável ao VSO 12 meses do Secovi-SP.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.vso12),fmt:v=>nf.format(v)+'%',freq:'Q',labelEnd:true})}));
   g.append(chartCard({title:'Participação do MCMV (%)',note:'Lançamentos, vendas e oferta. MCMV acima de 50% dos lançamentos é recorde da série (iniciada em 2019).',src:'CBIC/CII — Brain',render:b=>lineChart(b,{series:[{name:'Lançamentos',data:cut(M.share.L)},{name:'Vendas',data:cut(M.share.V)},{name:'Oferta final',data:cut(M.share.O)}],fmt:v=>nf.format(v)+'%',freq:'Q',labelEnd:true})}));
-  g.append(chartCard({title:'Meses de estoque por segmento',note:'Oferta final ÷ média mensal de vendas dos últimos 12 meses. O MCMV gira muito mais rápido que o médio/alto padrão.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.meses),fmt:v=>nf.format(v)+' m',freq:'Q',labelEnd:true})}));
-  g.append(chartCard({title:'Absorção líquida 12 meses por segmento (% das vendas)',note:'Vendas − lançamentos nos últimos 4 trimestres. Positivo = estoque do segmento caindo.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.absorcao),fmt:v=>fmtPct(v),freq:'Q',labelEnd:true})}));
-  g.append(chartCard({title:'Taxa de reposição por segmento (lançamentos ÷ vendas, 12 meses)',note:'Acima de 1 = lançando mais do que vende.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.reposicao),fmt:v=>nf2.format(v)+'×',freq:'Q',zero:false,labelEnd:true})}));
+  g.append(chartCard({title:'Meses de estoque — MCMV × MAP',note:'Oferta final ÷ média mensal de vendas dos últimos 12 meses. O MCMV gira muito mais rápido que o MAP.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.meses),fmt:v=>nf.format(v)+' m',freq:'Q',labelEnd:true})}));
+  g.append(chartCard({title:'Absorção líquida 12 meses — MCMV × MAP (% das vendas)',note:'Vendas − lançamentos nos últimos 4 trimestres. Positivo = estoque do segmento caindo.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.absorcao),fmt:v=>fmtPct(v),freq:'Q',labelEnd:true})}));
+  g.append(chartCard({title:'Taxa de reposição — MCMV × MAP (lançamentos ÷ vendas, 12 meses)',note:'Acima de 1 = lançando mais do que vende.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:pair(m=>m.reposicao),fmt:v=>nf2.format(v)+'×',freq:'Q',zero:false,labelEnd:true})}));
   g.append(chartCard({title:'MCMV — lançamentos × vendas (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>lineChart(b,{series:[{name:'Lançamentos',data:cut(M.mcmv.L)},{name:'Vendas',data:cut(M.mcmv.V)}],freq:'Q',labelEnd:true})}));
-  g.append(chartCard({title:'Demais padrões — lançamentos × vendas (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>lineChart(b,{series:[{name:'Lançamentos',data:cut(M.demais.L)},{name:'Vendas',data:cut(M.demais.V)}],freq:'Q',labelEnd:true})}));
+  g.append(chartCard({title:'MAP — lançamentos × vendas (unidades/trimestre)',src:'CBIC/CII — Brain',render:b=>lineChart(b,{series:[{name:'Lançamentos',data:cut(M.map.L)},{name:'Vendas',data:cut(M.map.V)}],freq:'Q',labelEnd:true})}));
   root.append(g);
 }
 
