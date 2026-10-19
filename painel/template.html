@@ -94,6 +94,12 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:12px;margin-top:6px}
 .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--border);color:var(--ink-2);margin-left:6px}
 .theme{margin-left:auto}
 .empty{color:var(--muted);font-size:12px;padding:20px 0}
+.st{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.st i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.st.good i{background:#0ca30c}.st.warn i{background:#fab219}.st.bad i{background:#d03b3b}
+.sem{table-layout:fixed}.sem td{vertical-align:middle}.sem .ref{color:var(--muted);font-size:11.5px}
+.sem th:nth-child(1){width:27%}.sem th:nth-child(2){width:11%}.sem th:nth-child(3){width:12%}.sem th:nth-child(4){width:11%}
+.sem td.n,.sem td:nth-child(3){white-space:nowrap}
 </style>
 </head>
 <body>
@@ -261,7 +267,7 @@ function section(id,label){ return {id,label}; }
 
 // ---------- views ----------
 const VIEWS=[
-  section('visao','Visão geral'), section('oferta','Oferta primária'), section('credito','Crédito'), section('funding','Funding'),
+  section('visao','Visão geral'), section('ciclo','Ciclo'), section('oferta','Oferta primária'), section('credito','Crédito'), section('funding','Funding'),
   section('precos','Preços'), section('custos','Custos & macro'), section('imoveis','Perfil dos imóveis'), section('fontes','Fontes & catálogo')
 ];
 
@@ -416,7 +422,88 @@ function viewFontes(root){
   root.append(g);
 }
 
-const RENDER={visao:viewVisao,oferta:viewOferta,credito:viewCredito,funding:viewFunding,precos:viewPrecos,custos:viewCustos,imoveis:viewImoveis,fontes:viewFontes};
+// ---------- indicadores derivados (aba Ciclo) ----------
+function join(a,b,fn){ const m=new Map(b); return a.filter(p=>m.has(p[0])).map(p=>[p[0],fn(p[1],m.get(p[0]))]); }
+function chainIndex(monthlyPct, base){ let acc=100; return monthlyPct.filter(p=>p[0]>=base).map(p=>{acc*=1+p[1]/100; return [p[0],acc];}); }
+function pmt(P,rateAA,n=360){ const i=Math.pow(1+rateAA/100,1/12)-1; return P*i/(1-Math.pow(1+i,-n)); }
+function status(v,[g,w],higherIsBad=true){ if(v==null||!isFinite(v)) return null; if(higherIsBad) return v<=g?'good':v<=w?'warn':'bad'; return v>=g?'good':v>=w?'warn':'bad'; }
+const ST_LABEL={good:'favorável',warn:'atenção',bad:'desfavorável'};
+function stPill(s){ const e=el('span',{class:'st '+(s||'')}); e.append(el('i'), ST_LABEL[s]||'–'); return e; }
+
+function ciclo(){
+  const sel=S('bcb_sgs','selic_meta_m'), ipca12=S('bcb_sgs','ipca_12m'), ipca=S('bcb_sgs','ipca');
+  const C=(k,r='BR')=>S('bcb_olinda',k,r);
+  const out={};
+  out.juroReal = join(sel,ipca12,(a,b)=>a-b);
+  out.spread = join(C('credito_contratacao_taxa_pf_sfh'),sel,(a,b)=>a-b);
+  // CBIC (trimestral)
+  const cbL=S('cbic','lancamentos','BR'), cbV=S('cbic','vendas','BR'), cbO=S('cbic','oferta','BR');
+  out.absorcao = join(cbV,cbL,(v,l)=>v-l);
+  out.absorcao12 = join(roll4(cbV),roll4(cbL),(v,l)=>v-l);
+  out.absorcaoPct = join(out.absorcao12,roll4(cbV),(a,v)=>a/v*100);
+  out.reposicao = join(roll4(cbL),roll4(cbV),(l,v)=>l/v);
+  out.mesesEstoque = join(cbO,roll4(cbV),(o,v)=>o/(v/12));
+  out.mesesRegiao = ['Sudeste','Sul','Nordeste','Centro-Oeste','Norte'].map(r=>({name:r,data:join(S('cbic','oferta',r),roll4(S('cbic','vendas',r)),(o,v)=>o/(v/12))}));
+  // Abrainc distratos
+  out.distratos = join(S('abrainc','distratos_total'),S('abrainc','vendas_total'),(d,v)=>d/v*100);
+  // preço ÷ custo: IGMI-R (jan/2014=100) ÷ INCC encadeado (jan/2014=100)
+  const incc=chainIndex(S('bcb_sgs','incc_di'),'2014-01');
+  out.precoCusto = join(S('abecip','igmi_r','BR'),incc,(p,c)=>p/c*100);
+  out.precoCustoYoy = yoy(out.precoCusto);
+  // prestação do imóvel mediano (MVG-R × LTV SFH, taxa SFH, 360 meses, tabela Price), nominal e real (IPCA até o último mês)
+  const mvg=C('indices_mvg_r'), ltv=C('credito_contratacao_ltv_pf_sfh'), tx=C('credito_contratacao_taxa_pf_sfh');
+  const presNom=join(join(mvg,ltv,(m,l)=>m*l/100),tx,(P,t)=>pmt(P,t));
+  const ipIdx=chainIndex(ipca,'2014-01'); const ipLast=last(ipIdx)?last(ipIdx)[1]:100;
+  out.prestacaoReal=join(presNom,ipIdx,(p,i)=>p*ipLast/i);
+  out.prestacaoNom=presNom;
+  // ticket médio SBPE (R$) e share FGTS (12m) e cobertura da carteira
+  out.ticket = join(S('abecip','sbpe_rs_total'),S('abecip','sbpe_unid_total'),(r,u)=>r*1e6/u);
+  const fontes=['sfh','fgts','livre','home_equity'].map(k=>C(`credito_contratacao_contratado_pf_${k}`));
+  out.shareFgts = join(roll12(fontes[1]),roll12(mergeSum(fontes)),(f,t)=>f/t*100);
+  out.cobertura = join(C('credito_estoque_carteira_credito_pf_sfh'),C('fontes_sbpe_saldo'),(c,s)=>c/s*100);
+  out.inad = C('credito_estoque_inadimplencia_pf_sfh');
+  return out;
+}
+
+function viewCiclo(root){
+  const g=el('div',{class:'grid'}); const K=ciclo();
+  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Indicadores <b>derivados</b> das séries do painel para ler a fase do ciclo imobiliário. Faixas de leitura são regras de bolso, não previsões; cada linha diz como foi calculada.</p>'}));
+  // ---- semáforo
+  const rows=[
+    ['Juro real ex-ante','Selic meta − IPCA 12m',K.juroReal,v=>nf2.format(v)+' pp',status(last(K.juroReal)?.[1],[4,7]),'< 4 pp favorável · > 7 pp desfavorável','antecede vendas de médio/alto padrão em 2–4 trimestres'],
+    ['Spread SBPE − Selic','taxa média SFH (PF) − Selic meta',K.spread,v=>nf2.format(v)+' pp',status(last(K.spread)?.[1],[1,0],false),'> 1 pp favorável · < 0 desfavorável','negativo = bancos subsidiando com poupança; insustentável se a poupança sair'],
+    ['Absorção líquida 12m','vendas − lançamentos (CBIC, 4 trimestres), % das vendas',K.absorcaoPct,v=>fmtPct(v),status(last(K.absorcaoPct)?.[1],[0,-5],false),'> 0 favorável · < −5% desfavorável','positivo = estoque caindo'],
+    ['Taxa de reposição','lançamentos ÷ vendas (CBIC, 12m)',K.reposicao,v=>nf2.format(v)+'×',status(Math.abs((last(K.reposicao)?.[1]||1)-1),[0.1,0.25]),'0,9–1,1 equilíbrio · > 1,25 excesso de lançamentos','acima de 1 por vários trimestres gera estoque em 18–24 meses'],
+    ['Meses de estoque','oferta final ÷ média mensal de vendas 12m (CBIC)',K.mesesEstoque,v=>nf.format(v)+' m',status(last(K.mesesEstoque)?.[1],[8,14]),'< 8 aquecido · > 14 saturado',''],
+    ['Distratos / vendas','Abrainc, mensal',K.distratos,v=>nf.format(v)+'%',status(last(K.distratos)?.[1],[10,15]),'< 10% favorável · > 15% desfavorável','estresse do comprador na chave'],
+    ['Preço ÷ custo (var. 12m)','IGMI-R ÷ INCC-DI encadeado, variação em 12 meses',K.precoCustoYoy,v=>fmtPct(v),status(last(K.precoCustoYoy)?.[1],[0,-3],false),'> 0 margem abrindo · < −3% margem fechando','preço abaixo do custo antecede queda de lançamentos'],
+    ['Prestação real do imóvel mediano','MVG-R × LTV SFH, taxa SFH, 360 meses, R$ de hoje',K.prestacaoReal,v=>fmtBRL(v)+'/mês',status(diffPct(K.prestacaoReal,12),[0,10]),'var. 12m < 0 favorável · > 10% desfavorável','acessibilidade: quanto custa financiar o imóvel típico'],
+    ['Dependência do FGTS','contratações FGTS ÷ total PF (12m)',K.shareFgts,v=>nf.format(v)+'%',status(last(K.shareFgts)?.[1],[40,50]),'< 40% favorável · > 50% dependente de política pública',''],
+    ['Cobertura da carteira pela poupança','carteira SFH (PF) ÷ saldo SBPE',K.cobertura,v=>nf.format(v)+'%',status(last(K.cobertura)?.[1],[75,90]),'< 75% folga · > 90% funding esgotando',''],
+    ['Inadimplência SFH','BCB, PF, > 90 dias',K.inad,v=>nf2.format(v)+'%',status(last(K.inad)?.[1],[1.5,2.5]),'< 1,5% favorável · > 2,5% desfavorável',''],
+  ];
+  const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Semáforo do ciclo'),el('p',{class:'note'},'Valor mais recente de cada indicador, sua leitura e a variação em 12 meses. Verde/amarelo/vermelho sempre acompanhados do rótulo.'));
+  const t=el('table',{class:'sem'}); t.append(el('thead',{},el('tr',{},el('th',{},'Indicador'),el('th',{class:'n'},'Atual'),el('th',{},'Leitura'),el('th',{class:'n'},'12 meses antes'),el('th',{},'Referência / cálculo'))));
+  const tb=el('tbody');
+  for(const [nm,calc,s,f,st,ref,why] of rows){ const L=last(s); const isQ = s===K.absorcaoPct||s===K.reposicao||s===K.mesesEstoque; const pv = isQ ? (s.length>4?s[s.length-5]:null) : (s.length>12?s[s.length-13]:null);
+    const when = L ? ' · ' + (isQ ? fmtQ(L[0]) : fmtYMlong(L[0])) : '';
+    const tdName = el('td', {}, el('b', {}, nm), el('div', {class: 'ref'}, calc + when));
+    const tdRef = el('td', {}, el('div', {}, ref), why ? el('div', {class: 'ref'}, why) : null);
+    const tr = el('tr'); tr.append(tdName, el('td', {class: 'n'}, L ? f(L[1]) : '–'), el('td', {}, stPill(st)), el('td', {class: 'n'}, pv ? f(pv[1]) : '–'), tdRef); tb.append(tr); }
+  t.append(tb); card.append(el('div',{class:'tablewrap'},t)); g.append(card);
+  // ---- gráficos
+  g.append(chartCard({title:'Juro real ex-ante e spread SBPE − Selic (pp)',note:'Juro real alto trava o médio/alto padrão; spread negativo mostra o SBPE sendo vendido abaixo do custo de oportunidade.',src:'BCB; IBGE',render:b=>lineChart(b,{series:[{name:'Juro real (Selic − IPCA 12m)',data:cut(K.juroReal)},{name:'Spread SFH − Selic',data:cut(K.spread)}],fmt:v=>nf2.format(v)+' pp',labelEnd:true})}));
+  g.append(chartCard({title:'Absorção líquida e taxa de reposição — Brasil, ~220 cidades',note:'Absorção = vendas − lançamentos (12m, % das vendas). Reposição = lançamentos ÷ vendas (12m).',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:[{name:'Absorção líquida 12m (% vendas)',data:cut(K.absorcaoPct)}],fmt:v=>fmtPct(v),freq:'Q',area:true,labelEnd:true}),table:()=>[{name:'Absorção 12m (unid.)',data:K.absorcao12},{name:'Reposição (×)',data:K.reposicao,fmt:v=>nf2.format(v)}]}));
+  g.append(chartCard({title:'Meses de estoque por região (CBIC)',note:'Oferta final ÷ média mensal de vendas dos últimos 12 meses. Regra de bolso: < 8 aquecido, > 14 saturado.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:K.mesesRegiao.map(s=>({name:s.name,data:cut(s.data)})),fmt:v=>nf.format(v)+' m',freq:'Q',labelEnd:true})}));
+  g.append(chartCard({title:'Preço ÷ custo de construção (IGMI-R ÷ INCC-DI, jan/2014 = 100)',note:'Proxy da margem da incorporação: sobe quando o preço de venda corre à frente do custo de obra.',src:'ABECIP/FGV; FGV via BCB',render:b=>lineChart(b,{series:[{name:'Preço ÷ custo',data:cut(K.precoCusto)}],fmt:v=>nf.format(v),zero:false,area:true,labelEnd:true})}));
+  g.append(chartCard({title:'Prestação do imóvel mediano financiado — R$ de hoje',note:'Imóvel = mediana de garantia (MVG-R); financia-se o LTV médio do SFH à taxa média do mês, 360 meses (Price). Deflacionado pelo IPCA.',src:'cálculo sobre BCB; IBGE',render:b=>lineChart(b,{series:[{name:'Prestação real',data:cut(K.prestacaoReal)},{name:'Prestação nominal',data:cut(K.prestacaoNom),color:'var(--muted)'}],fmt:fmtBRL,zero:false,labelEnd:true})}));
+  g.append(chartCard({title:'Ticket médio financiado no SBPE (R$ por unidade)',src:'ABECIP',render:b=>lineChart(b,{series:[{name:'Ticket SBPE',data:cut(K.ticket)}],fmt:fmtBRL,zero:false,area:true,labelEnd:true})}));
+  g.append(chartCard({title:'Dependência de política pública: FGTS no crédito PF (12m, %)',src:'cálculo sobre BCB',render:b=>lineChart(b,{series:[{name:'Share FGTS',data:cut(K.shareFgts)}],fmt:v=>nf.format(v)+'%',area:true,labelEnd:true})}));
+  g.append(chartCard({title:'Distratos ÷ vendas (Abrainc, %) e inadimplência SFH (%)',src:'Abrainc-Fipe; BCB',render:b=>lineChart(b,{series:[{name:'Distratos / vendas',data:cut(K.distratos)},{name:'Inadimplência SFH',data:cut(K.inad)}],fmt:v=>nf.format(v)+'%',labelEnd:true})}));
+  root.append(g);
+}
+
+const RENDER={visao:viewVisao,ciclo:viewCiclo,oferta:viewOferta,credito:viewCredito,funding:viewFunding,precos:viewPrecos,custos:viewCustos,imoveis:viewImoveis,fontes:viewFontes};
 
 // ---------- app ----------
 function render(){
@@ -425,6 +512,7 @@ function render(){
   const sec=el('section',{role:'tabpanel'}); RENDER[state.view](sec); views.append(sec);
   document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===state.view));
   document.getElementById('ufwrap').style.display = ['credito','custos','imoveis'].includes(state.view)?'':'none';
+  document.getElementById('range').parentElement.style.display = state.view==='fontes'?'none':'';
   document.getElementById('citywrap').style.display = state.view==='precos'?'':'none';
   document.querySelectorAll('#range button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.y===state.years));
   location.hash=state.view;
