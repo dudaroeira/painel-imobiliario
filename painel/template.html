@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel Imobiliário Brasil</title>
+<style>
+:root{
+  color-scheme:light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10); --hover:rgba(11,11,11,.04);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --good:#006300; --bad:#d03b3b; --accent:#2a78d6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --hover:rgba(255,255,255,.05);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --good:#0ca30c; --bad:#e66767; --accent:#3987e5;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --hover:rgba(255,255,255,.05);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --good:#0ca30c; --bad:#e66767; --accent:#3987e5;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:inherit}
+header{padding:20px 16px 0;max-width:1280px;margin:0 auto}
+h1{font-size:22px;margin:0 0 2px;font-weight:650;letter-spacing:-.01em}
+.sub{color:var(--ink-2);font-size:13px;margin:0 0 14px}
+nav{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--grid)}
+nav button{background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-2);padding:8px 12px;font:inherit;font-weight:500;cursor:pointer;margin-bottom:-1px}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav button:hover{background:var(--hover)}
+main{max-width:1280px;margin:0 auto;padding:14px 16px 48px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px;color:var(--ink-2);font-size:13px}
+.filters label{display:flex;gap:6px;align-items:center}
+.filters select,.filters .seg{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px}
+.seg{display:inline-flex;padding:2px;gap:2px}
+.seg button{font:inherit;border:0;background:none;color:var(--ink-2);padding:3px 9px;border-radius:4px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--hover);color:var(--ink);font-weight:600}
+section[hidden]{display:none}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(12,1fr)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px 10px;min-width:0}
+.c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}.c8{grid-column:span 8}
+@media(max-width:900px){.c6,.c4,.c8{grid-column:span 12}.c3{grid-column:span 6}}
+@media(max-width:560px){.c3{grid-column:span 12}}
+.card h3{margin:0;font-size:14px;font-weight:600}
+.card .note{margin:2px 0 8px;color:var(--muted);font-size:12px}
+.card .src{margin:6px 0 0;color:var(--muted);font-size:11px}
+.tile .label{color:var(--ink-2);font-size:12px}
+.tile .value{font-size:26px;font-weight:600;line-height:1.15;margin:2px 0}
+.tile.hero .value{font-size:44px}
+.tile .delta{font-size:12px;color:var(--ink-2)}
+.tile .delta b{font-weight:600}
+.up{color:var(--good)}.down{color:var(--bad)}
+.tile .ref{color:var(--muted);font-size:11px}
+.chart{position:relative;width:100%;height:260px}
+.chart.tall{height:320px}
+.chart svg{display:block;width:100%;height:100%;overflow:visible}
+.chart .grid-line{stroke:var(--grid);stroke-width:1}
+.chart .axis-line{stroke:var(--axis);stroke-width:1}
+.chart text{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.chart .line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .area{opacity:.10}
+.chart .end-dot{stroke:var(--surface);stroke-width:2}
+.chart .end-label{fill:var(--ink-2);font-size:11px}
+.chart .xhair{stroke:var(--axis);stroke-width:1;pointer-events:none}
+.chart .hit{fill:transparent}
+.chart rect.bar{shape-rendering:crispEdges}
+.chart rect.bar:hover{filter:brightness(1.12)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:6px 0 0;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px solid;border-radius:1px}
+.legend i.sq{width:10px;height:10px;border:0;border-radius:2px}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:150px;z-index:5;display:none}
+.tip .d{color:var(--muted);margin-bottom:4px}
+.tip .r{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.tip .r i{display:inline-block;width:12px;border-top:2px solid;margin-right:6px}
+.tip .r b{font-weight:600;font-variant-numeric:tabular-nums}
+.tip .r span{color:var(--ink-2)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+th{color:var(--ink-2);font-weight:600;position:sticky;top:0;background:var(--surface)}
+.tablewrap{max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+details summary{cursor:pointer;color:var(--ink-2);font-size:12px;margin-top:6px}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--border);color:var(--ink-2);margin-left:6px}
+.theme{margin-left:auto}
+.empty{color:var(--muted);font-size:12px;padding:20px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Painel Imobiliário Brasil</h1>
+  <p class="sub">Inteligência de mercado consolidada de fontes públicas · dados coletados em <span id="built"></span></p>
+  <nav id="nav" role="tablist"></nav>
+</header>
+<main>
+  <div class="filters" id="filters">
+    <label>Período
+      <span class="seg" id="range">
+        <button data-y="3">3 anos</button><button data-y="5" aria-pressed="true">5 anos</button><button data-y="10">10 anos</button><button data-y="99">Tudo</button>
+      </span>
+    </label>
+    <label id="ufwrap">UF <select id="uf"></select></label>
+    <label id="citywrap">Cidade (preços) <select id="city"></select></label>
+    <label class="theme">Tema <select id="theme"><option value="">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
+  </div>
+  <div id="views"></div>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+const PAYLOAD = /*__DATA__*/;
+const D = PAYLOAD.data;
+const COLORS = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'].map(v=>`var(${v})`);
+const UF_NAMES = {BR:'Brasil',AC:'Acre',AL:'Alagoas',AM:'Amazonas',AP:'Amapá',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MG:'Minas Gerais',MS:'Mato Grosso do Sul',MT:'Mato Grosso',PA:'Pará',PB:'Paraíba',PE:'Pernambuco',PI:'Piauí',PR:'Paraná',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RO:'Rondônia',RR:'Roraima',RS:'Rio Grande do Sul',SC:'Santa Catarina',SE:'Sergipe',SP:'São Paulo',TO:'Tocantins'};
+const state = {view:'visao', years:5, uf:'BR', city:'São Paulo'};
+
+// ---------- acesso a dados ----------
+function S(src, sid, region='BR'){ const e = D[src]?.[sid]; if(!e) return []; return e.regions[region] || e.regions[Object.keys(e.regions)[0]] || []; }
+function has(src,sid,region){ return !!(D[src]?.[sid]?.regions[region]); }
+function regionsOf(src,sid){ return Object.keys(D[src]?.[sid]?.regions||{}); }
+const last = s => s.length ? s[s.length-1] : null;
+const lastN = (s,n) => s.slice(Math.max(0,s.length-n));
+function roll12(s){ const o=[]; for(let i=11;i<s.length;i++){ let t=0; for(let j=i-11;j<=i;j++) t+=s[j][1]; o.push([s[i][0],t]); } return o; }
+function yoy(s){ const m=new Map(s.map(p=>[p[0],p[1]])); return s.filter(p=>m.has(prevYear(p[0]))).map(p=>[p[0],(p[1]/m.get(prevYear(p[0]))-1)*100]); }
+function prevYear(ym){ return (parseInt(ym.slice(0,4))-1)+ym.slice(4); }
+function index100(s, base){ const b = base ? s.find(p=>p[0]>=base) : s[0]; if(!b) return []; return s.filter(p=>p[0]>=b[0]).map(p=>[p[0],p[1]/b[1]*100]); }
+function scale(s,k){ return s.map(p=>[p[0],p[1]*k]); }
+function diffPct(s,n){ if(s.length<=n) return null; const a=s[s.length-1][1], b=s[s.length-1-n][1]; return b? (a/b-1)*100 : null; }
+function diffAbs(s,n){ if(s.length<=n) return null; return s[s.length-1][1]-s[s.length-1-n][1]; }
+function cut(s){ if(state.years>=99) return s; const y=new Date().getFullYear()-state.years; return s.filter(p=>p[0]>=`${y}-01`); }
+function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
+
+// ---------- formatação ----------
+const nf = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
+const nf0 = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
+const nf2 = new Intl.NumberFormat('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2});
+function fmtBRL(v){ const a=Math.abs(v); if(a>=1e12) return 'R$ '+nf2.format(v/1e12)+' tri'; if(a>=1e9) return 'R$ '+nf.format(v/1e9)+' bi'; if(a>=1e6) return 'R$ '+nf.format(v/1e6)+' mi'; if(a>=1e3) return 'R$ '+nf.format(v/1e3)+' mil'; return 'R$ '+nf.format(v); }
+function fmtNum(v){ const a=Math.abs(v); if(a>=1e9) return nf.format(v/1e9)+' bi'; if(a>=1e6) return nf.format(v/1e6)+' mi'; if(a>=1e4) return nf.format(v/1e3)+' mil'; return nf.format(v); }
+function fmtPct(v,d=1){ return (v>0?'+':'')+v.toFixed(d).replace('.',',')+'%'; }
+function fmtBy(unit){ if(unit==='R$'||unit==='R$ mi'||unit==='R$ mil'||unit==='R$/m²') return v=>fmtBRL(v); if(unit==='%'||unit==='% a.a.'||unit==='% a.m.'||unit==='pp') return v=>nf2.format(v)+'%'; return v=>fmtNum(v); }
+const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function fmtYM(ym){ return MESES[parseInt(ym.slice(5,7))-1]+'/'+ym.slice(2,4); }
+function fmtYMlong(ym){ return MESES[parseInt(ym.slice(5,7))-1]+'/'+ym.slice(0,4); }
+function fmtQ(ym){ return 'T'+(Math.floor((parseInt(ym.slice(5,7))-1)/3)+1)+'/'+ym.slice(2,4); }
+function el(tag, attrs={}, ...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==='class') e.className=v; else if(k==='html') e.innerHTML=v; else if(k.startsWith('on')) e.addEventListener(k.slice(2),v); else e.setAttribute(k,v);} for(const k of kids){ if(k==null) continue; e.append(k.nodeType?k:document.createTextNode(k)); } return e; }
+
+// ---------- gráficos (SVG puro) ----------
+const NS='http://www.w3.org/2000/svg';
+function svgEl(t,a={}){ const e=document.createElementNS(NS,t); for(const [k,v] of Object.entries(a)) e.setAttribute(k,v); return e; }
+function niceTicks(min,max,n=4){ if(min===max){ max=min+1; } const span=max-min, step0=span/n, p=Math.pow(10,Math.floor(Math.log10(step0))), f=step0/p; const step=p*(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10); const lo=Math.floor(min/step)*step, hi=Math.ceil(max/step)*step; const t=[]; for(let v=lo;v<=hi+step/2;v+=step) t.push(+v.toFixed(10)); return t; }
+const tip = document.getElementById('tip');
+function showTip(x,y,html){ tip.innerHTML=''; tip.append(html); tip.style.display='block'; const r=tip.getBoundingClientRect(); let L=x+14, T=y+14; if(L+r.width>window.innerWidth-8) L=x-r.width-14; if(T+r.height>window.innerHeight-8) T=y-r.height-14; tip.style.left=L+'px'; tip.style.top=T+'px'; }
+function hideTip(){ tip.style.display='none'; }
+
+/* lineChart(container, {series:[{name,data,color?}], fmt, freq, zero?, labelEnd?}) */
+function lineChart(box, opt){
+  box.innerHTML='';
+  const W=box.clientWidth||600, H=box.clientHeight||260, m={t:10,r:opt.labelEnd?74:16,b:24,l:8};
+  const series = opt.series.filter(s=>s.data.length);
+  if(!series.length){ box.append(el('div',{class:'empty'},'Sem dados para o recorte selecionado.')); return; }
+  const dates=[...new Set(series.flatMap(s=>s.data.map(p=>p[0])))].sort();
+  const xi=new Map(dates.map((d,i)=>[d,i]));
+  let vals=series.flatMap(s=>s.data.map(p=>p[1])); let lo=Math.min(...vals), hi=Math.max(...vals);
+  if(opt.zero!==false){ lo=Math.min(lo,0); hi=Math.max(hi,0); }
+  const ticks=niceTicks(lo,hi); lo=ticks[0]; hi=ticks[ticks.length-1];
+  const fmt=opt.fmt||fmtNum;
+  const labW = Math.max(...ticks.map(t=>fmt(t).length))*6.4+8; m.l=Math.max(m.l,labW);
+  const x=i=>m.l+(dates.length>1? i/(dates.length-1):0.5)*(W-m.l-m.r), y=v=>m.t+(1-(v-lo)/(hi-lo))*(H-m.t-m.b);
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`});
+  for(const t of ticks){ svg.append(svgEl(t===0||t===lo?'line':'line',{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),class:(t===0&&lo<0)?'axis-line':'grid-line'})); const tx=svgEl('text',{x:m.l-6,y:y(t)+4,'text-anchor':'end'}); tx.textContent=fmt(t); svg.append(tx); }
+  const fx = opt.freq==='Q'?fmtQ:fmtYM; const step=Math.ceil(dates.length/Math.max(2,Math.floor((W-m.l-m.r)/70)));
+  dates.forEach((d,i)=>{ if(i%step===0||i===dates.length-1){ const tx=svgEl('text',{x:x(i),y:H-6,'text-anchor':i===dates.length-1?'end':'middle'}); tx.textContent=fx(d); svg.append(tx);} });
+  series.forEach((s,k)=>{
+    const col=s.color||COLORS[k%8];
+    const pts=s.data.map(p=>`${x(xi.get(p[0])).toFixed(1)},${y(p[1]).toFixed(1)}`);
+    if(opt.area && series.length===1){ const a=svgEl('path',{class:'area',fill:col,d:`M${pts[0]} L${pts.join(' L')} L${x(xi.get(s.data[s.data.length-1][0]))},${y(Math.max(lo,0))} L${x(xi.get(s.data[0][0]))},${y(Math.max(lo,0))} Z`}); svg.append(a); }
+    svg.append(svgEl('path',{class:'line',stroke:col,d:'M'+pts.join(' L')}));
+    const e=s.data[s.data.length-1]; svg.append(svgEl('circle',{class:'end-dot',cx:x(xi.get(e[0])),cy:y(e[1]),r:4,fill:col}));
+    if(opt.labelEnd){ const tx=svgEl('text',{class:'end-label',x:x(xi.get(e[0]))+8,y:y(e[1])+4}); tx.textContent=fmt(e[1]); svg.append(tx); }
+  });
+  const xh=svgEl('line',{class:'xhair',y1:m.t,y2:H-m.b,x1:0,x2:0,visibility:'hidden'}); svg.append(xh);
+  const hit=svgEl('rect',{class:'hit',x:m.l,y:0,width:Math.max(1,W-m.l-m.r),height:H}); svg.append(hit);
+  hit.addEventListener('pointermove',ev=>{ const r=svg.getBoundingClientRect(); const px=(ev.clientX-r.left)*W/r.width; const i=Math.max(0,Math.min(dates.length-1,Math.round((px-m.l)/(W-m.l-m.r)*(dates.length-1)))); xh.setAttribute('x1',x(i)); xh.setAttribute('x2',x(i)); xh.setAttribute('visibility','visible');
+    const d=dates[i]; const box=el('div'); box.append(el('div',{class:'d'},opt.freq==='Q'?fmtQ(d):fmtYMlong(d)));
+    series.forEach((s,k)=>{ const p=s.data.find(q=>q[0]===d); if(!p) return; const row=el('div',{class:'r'}); const i2=el('i'); i2.style.borderColor=s.color||COLORS[k%8]; const sp=el('span'); sp.textContent=s.name; row.append(el('span',{},i2,sp), el('b',{},fmt(p[1]))); box.append(row); });
+    showTip(ev.clientX,ev.clientY,box); });
+  hit.addEventListener('pointerleave',()=>{ xh.setAttribute('visibility','hidden'); hideTip(); });
+  box.append(svg);
+  if(series.length>1){ const lg=el('div',{class:'legend'}); series.forEach((s,k)=>{ const i=el('i'); i.style.borderColor=s.color||COLORS[k%8]; const sp=el('span'); sp.append(i, document.createTextNode(s.name)); lg.append(sp); }); box.after(lg); box._legend=lg; }
+}
+
+/* barChart(container, {series:[{name,data}], fmt, stacked:true}) — colunas empilhadas, gap 2px */
+function barChart(box, opt){
+  box.innerHTML='';
+  const W=box.clientWidth||600, H=box.clientHeight||260, m={t:10,r:12,b:24,l:8};
+  const series=opt.series.filter(s=>s.data.length);
+  if(!series.length){ box.append(el('div',{class:'empty'},'Sem dados para o recorte selecionado.')); return; }
+  const dates=[...new Set(series.flatMap(s=>s.data.map(p=>p[0])))].sort();
+  const maps=series.map(s=>new Map(s.data));
+  const tot=dates.map(d=>sum(maps.map(mp=>Math.max(0,mp.get(d)||0))));
+  const ticks=niceTicks(0,opt.max!=null?opt.max:Math.max(...tot)); const hi=ticks[ticks.length-1];
+  const fmt=opt.fmt||fmtNum; m.l=Math.max(m.l,Math.max(...ticks.map(t=>fmt(t).length))*6.4+8);
+  const bw=(W-m.l-m.r)/dates.length, bar=Math.min(24,Math.max(2,bw*0.7));
+  const x=i=>m.l+i*bw+(bw-bar)/2, y=v=>m.t+(1-v/hi)*(H-m.t-m.b);
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`});
+  for(const t of ticks){ svg.append(svgEl('line',{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),class:t===0?'axis-line':'grid-line'})); const tx=svgEl('text',{x:m.l-6,y:y(t)+4,'text-anchor':'end'}); tx.textContent=fmt(t); svg.append(tx); }
+  const fx = opt.freq==='Q'?fmtQ:fmtYM; const step=Math.ceil(dates.length/Math.max(2,Math.floor((W-m.l-m.r)/70)));
+  dates.forEach((d,i)=>{ if(i%step===0||i===dates.length-1){ const tx=svgEl('text',{x:x(i)+bar/2,y:H-6,'text-anchor':'middle'}); tx.textContent=fx(d); svg.append(tx);} });
+  dates.forEach((d,i)=>{
+    let acc=0; const g=svgEl('g');
+    series.forEach((s,k)=>{ const v=Math.max(0,maps[k].get(d)||0); if(!v) return; const y1=y(acc+v), y0=y(acc); const h=Math.max(0,y0-y1-(acc>0?2:0)); const r=svgEl('rect',{class:'bar',x:x(i),y:y1,width:bar,height:h,fill:s.color||COLORS[k%8],rx:k===series.length-1||h<4?3:0}); g.append(r); acc+=v; });
+    const hit=svgEl('rect',{class:'hit',x:m.l+i*bw,y:m.t,width:bw,height:H-m.t-m.b}); g.append(hit);
+    const show=ev=>{ const bx=el('div'); bx.append(el('div',{class:'d'},opt.freq==='Q'?fmtQ(d):fmtYMlong(d))); series.forEach((s,k)=>{ const v=maps[k].get(d); if(v==null) return; const row=el('div',{class:'r'}); const i2=el('i'); i2.style.borderColor=s.color||COLORS[k%8]; const sp=el('span'); sp.textContent=s.name; row.append(el('span',{},i2,sp), el('b',{},fmt(v))); bx.append(row); }); if(series.length>1){ const row=el('div',{class:'r'}); row.append(el('span',{},'Total'), el('b',{},fmt(tot[i]))); bx.append(row);} showTip(ev.clientX,ev.clientY,bx); };
+    g.addEventListener('pointermove',show); g.addEventListener('pointerleave',hideTip);
+    svg.append(g);
+  });
+  box.append(svg);
+  if(series.length>1){ const lg=el('div',{class:'legend'}); series.forEach((s,k)=>{ const i=el('i',{class:'sq'}); i.style.background=s.color||COLORS[k%8]; const sp=el('span'); sp.append(i, document.createTextNode(s.name)); lg.append(sp); }); box.after(lg); }
+}
+
+// ---------- componentes ----------
+const charts=[]; // para re-render em resize
+function chartCard({title,note,src,span=6,tall=false,render,table}){
+  const card=el('div',{class:`card c${span}`});
+  card.append(el('h3',{},title)); if(note) card.append(el('p',{class:'note'},note));
+  const box=el('div',{class:'chart'+(tall?' tall':'')}); card.append(box);
+  if(src) card.append(el('p',{class:'src'},'Fonte: '+src));
+  if(table){ const det=el('details'); det.append(el('summary',{},'Ver tabela')); const wrap=el('div',{class:'tablewrap'}); det.append(wrap); card.append(det); det.addEventListener('toggle',()=>{ if(det.open&&!wrap.children.length) wrap.append(dataTable(table())); }); }
+  charts.push({box,render}); queueMicrotask(()=>{ card._lg&&card._lg.remove(); render(box); });
+  return card;
+}
+function dataTable(series){ // series: [{name,data,fmt}]
+  const dates=[...new Set(series.flatMap(s=>s.data.map(p=>p[0])))].sort().reverse();
+  const t=el('table'); const tr=el('tr'); tr.append(el('th',{},'Período')); series.forEach(s=>tr.append(el('th',{class:'n'},s.name))); t.append(el('thead',{},tr));
+  const tb=el('tbody'); for(const d of dates){ const r=el('tr'); r.append(el('td',{},fmtYMlong(d))); series.forEach(s=>{ const p=s.data.find(q=>q[0]===d); r.append(el('td',{class:'n'},p?(s.fmt||fmtNum)(p[1]):'–')); }); tb.append(r);} t.append(tb); return t;
+}
+function tile({label,value,delta,deltaLabel,ref,hero=false,upGood=true,span=3}){
+  const c=el('div',{class:`card tile c${span}`+(hero?' hero':'')});
+  c.append(el('div',{class:'label'},label), el('div',{class:'value'},value));
+  if(delta!=null && isFinite(delta)){ const cls=(delta>=0)===upGood?'up':'down'; const d=el('div',{class:'delta'}); d.append(el('b',{class:cls},(typeof delta==='number'?fmtPct(delta):delta)), ' '+(deltaLabel||'vs. 12 meses antes')); c.append(d); }
+  if(ref) c.append(el('div',{class:'ref'},ref));
+  return c;
+}
+const uf = () => state.uf;
+const ufName = () => UF_NAMES[state.uf]||state.uf;
+function section(id,label){ return {id,label}; }
+
+// ---------- views ----------
+const VIEWS=[
+  section('visao','Visão geral'), section('oferta','Oferta primária'), section('credito','Crédito'), section('funding','Funding'),
+  section('precos','Preços'), section('custos','Custos & macro'), section('imoveis','Perfil dos imóveis'), section('fontes','Fontes & catálogo')
+];
+
+function viewVisao(root){
+  const g=el('div',{class:'grid'});
+  const cred = ['sfh','fgts','livre','home_equity'].map(k=>S('bcb_olinda',`credito_contratacao_contratado_pf_${k}`,'BR'));
+  const totPF = mergeSum(cred); const r12=roll12(totPF);
+  const ab_l=roll12(S('abrainc','lancamentos_total')), ab_v=roll12(S('abrainc','vendas_total'));
+  const sbpe=roll12(S('abecip','sbpe_unid_total'));
+  const fz=S('fipezap','venda_var12m','BR'), ig=yoy(S('abecip','igmi_r','BR'));
+  const selic=S('bcb_sgs','selic_meta_m'), inad=S('bcb_olinda','credito_estoque_inadimplencia_pf_sfh','BR');
+  const vso=S('secovi','vso_12m','São Paulo (cidade)');
+  const L=last(r12);
+  g.append(tile({label:'Crédito imobiliário contratado (PF, todas as fontes) — acumulado 12 meses',value:L?fmtBRL(L[1]):'–',delta:diffPct(r12,12),ref:L?'até '+fmtYMlong(L[0])+' · BCB':'',hero:true,span:6}));
+  g.append(tile({label:'Unidades financiadas SBPE — 12 meses',value:last(sbpe)?fmtNum(last(sbpe)[1]):'–',delta:diffPct(sbpe,12),ref:last(sbpe)?'até '+fmtYMlong(last(sbpe)[0])+' · ABECIP':''}));
+  g.append(tile({label:'Selic (meta)',value:last(selic)?nf2.format(last(selic)[1])+'% a.a.':'–',delta:diffAbs(selic,12)!=null?fmtPct(diffAbs(selic,12),2).replace('%',' pp'):null,upGood:false,ref:last(selic)?fmtYMlong(last(selic)[0])+' · BCB':''}));
+  g.append(tile({label:'Lançamentos — 12 meses (amostra Abrainc, ~20 incorporadoras)',value:last(ab_l)?fmtNum(last(ab_l)[1])+' unid.':'–',delta:diffPct(ab_l,12),ref:last(ab_l)?'até '+fmtYMlong(last(ab_l)[0])+' · Abrainc-Fipe':''}));
+  g.append(tile({label:'Vendas — 12 meses (amostra Abrainc)',value:last(ab_v)?fmtNum(last(ab_v)[1])+' unid.':'–',delta:diffPct(ab_v,12),ref:last(ab_v)?'até '+fmtYMlong(last(ab_v)[0])+' · Abrainc-Fipe':''}));
+  g.append(tile({label:'Preço de oferta — venda (FipeZap Brasil, 12 meses)',value:last(fz)?fmtPct(last(fz)[1]):'–',ref:last(fz)?fmtYMlong(last(fz)[0])+' · Fipe/ZAP':''}));
+  g.append(tile({label:'Preço de transação — IGMI-R Brasil (12 meses)',value:last(ig)?fmtPct(last(ig)[1]):'–',ref:last(ig)?fmtYMlong(last(ig)[0])+' · ABECIP/FGV':''}));
+  g.append(tile({label:'Inadimplência SFH (PF, Brasil)',value:last(inad)?nf2.format(last(inad)[1])+'%':'–',delta:diffAbs(inad,12)!=null?fmtPct(diffAbs(inad,12),2).replace('%',' pp'):null,upGood:false,ref:last(inad)?fmtYMlong(last(inad)[0])+' · BCB':''}));
+  g.append(tile({label:'VSO 12 meses — cidade de São Paulo',value:last(vso)?nf2.format(last(vso)[1])+'%':'–',delta:diffAbs(vso,12)!=null?fmtPct(diffAbs(vso,12),1).replace('%',' pp'):null,ref:last(vso)?fmtYMlong(last(vso)[0])+' · Secovi-SP':''}));
+  g.append(tile({label:'IPCA 12 meses',value:last(S('bcb_sgs','ipca_12m'))?nf2.format(last(S('bcb_sgs','ipca_12m'))[1])+'%':'–',upGood:false,ref:'IBGE via BCB'}));
+  g.append(chartCard({title:'Crédito imobiliário contratado por fonte — PF, Brasil (R$, mensal)',note:'SFH = recursos de poupança (SBPE); FGTS = programas habitacionais; taxa de mercado = SFI/livre.',src:'BCB — Informações do Mercado Imobiliário',span:6,
+    render:b=>barChart(b,{series:[{name:'SFH/SBPE',data:cut(cred[0])},{name:'FGTS',data:cut(cred[1])},{name:'Taxa de mercado',data:cut(cred[2])},{name:'Home equity',data:cut(cred[3])}],fmt:fmtBRL}),
+    table:()=>[{name:'SFH',data:cred[0],fmt:fmtBRL},{name:'FGTS',data:cred[1],fmt:fmtBRL},{name:'Livre',data:cred[2],fmt:fmtBRL},{name:'Home equity',data:cred[3],fmt:fmtBRL}]}));
+  g.append(chartCard({title:'Lançamentos × vendas — acumulado 12 meses (amostra Abrainc-Fipe)',note:'~20 incorporadoras associadas; não é censo nacional. Vendas acima de lançamentos = estoque caindo.',src:'Abrainc-Fipe',span:6,
+    render:b=>lineChart(b,{series:[{name:'Lançamentos 12m',data:cut(ab_l)},{name:'Vendas 12m',data:cut(ab_v)}],fmt:fmtNum,labelEnd:true}),table:()=>[{name:'Lançamentos 12m',data:ab_l},{name:'Vendas 12m',data:ab_v}]}));
+  g.append(chartCard({title:'Preços: oferta (FipeZap) × transação (IGMI-R) × IPCA — variação em 12 meses, Brasil',note:'FipeZap mede preço pedido em anúncios; IGMI-R mede avaliações de imóveis efetivamente financiados.',src:'Fipe/ZAP; ABECIP/FGV; IBGE',span:12,
+    render:b=>lineChart(b,{series:[{name:'FipeZap venda',data:cut(fz)},{name:'IGMI-R',data:cut(ig)},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m'))}],fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
+  root.append(g);
+}
+function mergeSum(list){ const m=new Map(); for(const s of list) for(const [d,v] of s) m.set(d,(m.get(d)||0)+v); return [...m].sort((a,b)=>a[0]<b[0]?-1:1); }
+
+function viewOferta(root){
+  const g=el('div',{class:'grid'});
+  const A=(k)=>S('abrainc',k);
+  g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Não há censo nacional público de lançamentos/vendas. Abaixo, as duas melhores amostras abertas: <b>Abrainc-Fipe</b> (Brasil, ~20 grandes incorporadoras, viés MCMV) e <b>Secovi-SP</b> (cidade de São Paulo, associadas).</p>'}));
+  g.append(chartCard({title:'Lançamentos por segmento — Brasil, amostra Abrainc (unidades/mês)',src:'Abrainc-Fipe',render:b=>barChart(b,{series:[{name:'MCMV',data:cut(A('lancamentos_mcmv'))},{name:'Médio/alto padrão',data:cut(A('lancamentos_map'))},{name:'Outros',data:cut(A('lancamentos_outros'))}]}),table:()=>[{name:'MCMV',data:A('lancamentos_mcmv')},{name:'MAP',data:A('lancamentos_map')},{name:'Total',data:A('lancamentos_total')}]}));
+  g.append(chartCard({title:'Vendas por segmento — Brasil, amostra Abrainc (unidades/mês)',src:'Abrainc-Fipe',render:b=>barChart(b,{series:[{name:'MCMV',data:cut(A('vendas_mcmv'))},{name:'Médio/alto padrão',data:cut(A('vendas_map'))},{name:'Outros',data:cut(A('vendas_outros'))}]}),table:()=>[{name:'MCMV',data:A('vendas_mcmv')},{name:'MAP',data:A('vendas_map')},{name:'Total',data:A('vendas_total')}]}));
+  const of=A('oferta_total'), v12=roll12(A('vendas_total')); const meses=of.filter(p=>v12.find(q=>q[0]===p[0])).map(p=>[p[0],p[1]/(v12.find(q=>q[0]===p[0])[1]/12)]);
+  g.append(chartCard({title:'Oferta final (estoque) por segmento — unidades',src:'Abrainc-Fipe',render:b=>barChart(b,{series:[{name:'MCMV',data:cut(A('oferta_mcmv'))},{name:'Médio/alto padrão',data:cut(A('oferta_map'))},{name:'Outros',data:cut(A('oferta_outros'))}]})}));
+  g.append(chartCard({title:'Meses de estoque (oferta ÷ média mensal de vendas dos últimos 12 meses)',note:'Quanto tempo o estoque atual levaria para ser vendido no ritmo recente.',src:'cálculo sobre Abrainc-Fipe',render:b=>lineChart(b,{series:[{name:'Meses de estoque',data:cut(meses)}],fmt:v=>nf.format(v)+' m',area:true,labelEnd:true})}));
+  const dist=A('distratos_total'), vend=A('vendas_total'); const dr=dist.filter(p=>vend.find(q=>q[0]===p[0])).map(p=>[p[0],p[1]/vend.find(q=>q[0]===p[0])[1]*100]);
+  g.append(chartCard({title:'Distratos — unidades/mês e % das vendas',note:'Lei dos Distratos (13.786/2018) reduziu estruturalmente o nível a partir de 2019.',src:'Abrainc-Fipe',render:b=>lineChart(b,{series:[{name:'Distratos / vendas (%)',data:cut(dr)}],fmt:v=>nf.format(v)+'%',area:true,labelEnd:true}),table:()=>[{name:'Distratos',data:dist},{name:'Vendas',data:vend},{name:'%',data:dr,fmt:v=>nf.format(v)+'%'}]}));
+  g.append(chartCard({title:'VGV lançado × vendido (nominal, R$ mi/mês)',src:'Abrainc-Fipe',render:b=>lineChart(b,{series:[{name:'VGV lançado',data:cut(scale(A('vgv_lancamentos_nominal_total'),1e6))},{name:'VGV vendido',data:cut(scale(A('vgv_vendas_nominal_total'),1e6))}],fmt:fmtBRL})}));
+  // Secovi
+  const SP='São Paulo (cidade)'; const Sc=k=>S('secovi',k,SP);
+  g.append(el('div',{class:'c12',html:'<h2 style="font-size:16px;margin:10px 0 -4px">Cidade de São Paulo — Secovi-SP (PMI)</h2>'}));
+  g.append(chartCard({title:'Lançamentos × vendas de unidades residenciais novas (mês)',src:'Secovi-SP — PMI',render:b=>lineChart(b,{series:[{name:'Lançamentos',data:cut(Sc('lancamentos'))},{name:'Vendas',data:cut(Sc('vendas'))}],labelEnd:true}),table:()=>[{name:'Lançamentos',data:Sc('lancamentos')},{name:'Vendas',data:Sc('vendas')},{name:'Oferta final',data:Sc('oferta')}]}));
+  g.append(chartCard({title:'Oferta final (unidades não vendidas de lançamentos de 36 meses)',src:'Secovi-SP — PMI',render:b=>lineChart(b,{series:[{name:'Oferta final',data:cut(Sc('oferta'))}],area:true,labelEnd:true})}));
+  g.append(chartCard({title:'VSO — vendas sobre oferta (%)',note:'Mensal e acumulado 12 meses.',src:'Secovi-SP — PMI',render:b=>lineChart(b,{series:[{name:'VSO mensal',data:cut(Sc('vso_mensal'))},{name:'VSO 12 meses',data:cut(Sc('vso_12m'))}],fmt:v=>nf.format(v)+'%',labelEnd:true})}));
+  g.append(chartCard({title:'VGV × VGL (R$ mi, deflacionado INCC-DI)',src:'Secovi-SP — PMI',render:b=>lineChart(b,{series:[{name:'VGV (vendas)',data:cut(scale(Sc('vgv'),1e6))},{name:'VGL (lançamentos)',data:cut(scale(Sc('vgl'),1e6))}],fmt:fmtBRL})}));
+  root.append(g);
+}
+
+function viewCredito(root){
+  const g=el('div',{class:'grid'}); const R=uf(); const C=(k)=>S('bcb_olinda',k,R);
+  g.append(el('div',{class:'c12',html:`<p class="note" style="margin:0 0 -4px;color:var(--muted)">Recorte: <b>${ufName()}</b> (troque a UF no filtro acima). Fonte única e censitária: BCB, todas as instituições do SFN.</p>`}));
+  const fontes=[['sfh','SFH/SBPE'],['fgts','FGTS'],['livre','Taxa de mercado'],['home_equity','Home equity']];
+  g.append(chartCard({title:'Crédito contratado por fonte de recursos — PF (R$/mês)',src:'BCB',span:8,tall:true,render:b=>barChart(b,{series:fontes.map(([k,n])=>({name:n,data:cut(C(`credito_contratacao_contratado_pf_${k}`))})),fmt:fmtBRL}),table:()=>fontes.map(([k,n])=>({name:n,data:C(`credito_contratacao_contratado_pf_${k}`),fmt:fmtBRL}))}));
+  const tot=mergeSum(fontes.map(([k])=>C(`credito_contratacao_contratado_pf_${k}`))); const r12=roll12(tot);
+  g.append(chartCard({title:'Total PF — acumulado 12 meses',src:'BCB',span:4,tall:true,render:b=>lineChart(b,{series:[{name:'12 meses',data:cut(r12)}],fmt:fmtBRL,area:true,labelEnd:true})}));
+  g.append(chartCard({title:'Taxa média das novas contratações — PF (% a.a.)',note:'Comparar com a Selic: o spread do SBPE encolhe quando a Selic sobe.',src:'BCB',render:b=>lineChart(b,{series:[{name:'SFH/SBPE',data:cut(C('credito_contratacao_taxa_pf_sfh'))},{name:'FGTS',data:cut(C('credito_contratacao_taxa_pf_fgts'))},{name:'Taxa de mercado',data:cut(C('credito_contratacao_taxa_pf_livre'))},{name:'Selic meta',data:cut(S('bcb_sgs','selic_meta_m')),color:'var(--muted)'}],fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
+  g.append(chartCard({title:'LTV médio das contratações — PF (%)',note:'Loan-to-value: parcela do imóvel financiada.',src:'BCB',render:b=>lineChart(b,{series:[{name:'SFH/SBPE',data:cut(C('credito_contratacao_ltv_pf_sfh'))},{name:'FGTS',data:cut(C('credito_contratacao_ltv_pf_fgts'))},{name:'Taxa de mercado',data:cut(C('credito_contratacao_ltv_pf_livre'))}],fmt:v=>nf.format(v)+'%',zero:false,labelEnd:true})}));
+  const idx=[['tr','TR'],['ipca','IPCA'],['prefixado','Prefixado'],['outros','Outros']].map(([k,n])=>({name:n,data:C(`credito_contratacao_indexador_pf_${k}`)}));
+  const idxTot=mergeSum(idx.map(s=>s.data)); const idxShare=idx.map(s=>({name:s.name,data:s.data.map(p=>{const t=idxTot.find(q=>q[0]===p[0]); return [p[0], t&&t[1]?p[1]/t[1]*100:0];})}));
+  g.append(chartCard({title:'Forma de financiamento: contratações PF por indexador (% do mês)',note:'TR domina (SBPE/FGTS); IPCA e prefixado surgiram em 2019-21 e recuaram com a alta de juros.',src:'BCB',render:b=>barChart(b,{series:idxShare.map(s=>({name:s.name,data:cut(s.data)})),fmt:v=>nf.format(v)+'%',max:100})}));
+  g.append(chartCard({title:'Inadimplência da carteira — PF (% > 90 dias)',src:'BCB',render:b=>lineChart(b,{series:fontes.map(([k,n])=>({name:n,data:cut(C(`credito_estoque_inadimplencia_pf_${k}`))})),fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
+  g.append(chartCard({title:'Saldo da carteira — PF por fonte (R$)',src:'BCB',render:b=>barChart(b,{series:fontes.map(([k,n])=>({name:n,data:cut(C(`credito_estoque_carteira_credito_pf_${k}`))})),fmt:fmtBRL})}));
+  const un=S('abecip','sbpe_unid_total'), unC=S('abecip','sbpe_unid_construcao'), unA=S('abecip','sbpe_unid_aquisicao');
+  g.append(chartCard({title:'Unidades financiadas com recursos SBPE — Brasil (construção × aquisição)',note:'Complementa o BCB (que publica só R$). Série nacional: não muda com a UF.',src:'ABECIP',render:b=>barChart(b,{series:[{name:'Aquisição',data:cut(unA)},{name:'Construção',data:cut(unC)}]}),table:()=>[{name:'Aquisição',data:unA},{name:'Construção',data:unC},{name:'Total',data:un}]}));
+  root.append(g);
+}
+
+function viewFunding(root){
+  const g=el('div',{class:'grid'}); const C=k=>S('bcb_olinda',k,'BR');
+  g.append(chartCard({title:'Saldo da poupança SBPE (R$)',note:'Principal fonte do SFH. Resgates líquidos persistentes desde 2021 pressionam o funding.',src:'BCB',render:b=>lineChart(b,{series:[{name:'Poupança SBPE',data:cut(C('fontes_sbpe_saldo'))}],fmt:fmtBRL,area:true,labelEnd:true})}));
+  g.append(chartCard({title:'Funding de mercado: estoque de LCI, CRI e LIG (R$)',note:'Séries do BCB encerradas em fev/2025; manter via B3/ANBIMA (a implementar).',src:'BCB',render:b=>lineChart(b,{series:[{name:'LCI',data:cut(C('fontes_lci'))},{name:'CRI',data:cut(C('fontes_cri'))},{name:'LIG',data:cut(C('fontes_lig'))}],fmt:fmtBRL,labelEnd:true})}));
+  g.append(chartCard({title:'Direcionamento da poupança: aplicações em crédito imobiliário (R$)',note:'Aquisição + construção = financiamentos computados na exigibilidade de 65%.',src:'BCB',render:b=>barChart(b,{series:[{name:'Aquisição',data:cut(C('direcionamento_aquisicao_imobiliario'))},{name:'Construção',data:cut(C('direcionamento_construcao_imobiliario'))}],fmt:fmtBRL})}));
+  const sfh=C('credito_estoque_carteira_credito_pf_sfh'), sb=C('fontes_sbpe_saldo'); const ratio=sfh.filter(p=>sb.find(q=>q[0]===p[0])).map(p=>[p[0],p[1]/sb.find(q=>q[0]===p[0])[1]*100]);
+  g.append(chartCard({title:'Carteira SFH (PF) ÷ saldo da poupança SBPE (%)',note:'Acima de 100%: o crédito SBPE já excede a poupança que o lastreia — dependência crescente de LCI/CRI/LIG.',src:'cálculo sobre BCB',render:b=>lineChart(b,{series:[{name:'Carteira/poupança',data:cut(ratio)}],fmt:v=>nf.format(v)+'%',area:true,labelEnd:true})}));
+  root.append(g);
+}
+
+function viewPrecos(root){
+  const g=el('div',{class:'grid'}); const city=state.city;
+  const F=(k,r)=>S('fipezap',k,r);
+  g.append(el('div',{class:'c12',html:`<p class="note" style="margin:0 0 -4px;color:var(--muted)">Cidade selecionada: <b>${city}</b>. FipeZap = preço de <b>oferta</b> (anúncios); IGMI-R = preço de <b>transação</b> (avaliações de imóveis financiados).</p>`}));
+  g.append(chartCard({title:`Variação em 12 meses — venda e locação: ${city} × Brasil`,src:'Fipe/ZAP',render:b=>lineChart(b,{series:[{name:`Venda — ${city}`,data:cut(F('venda_var12m',city))},{name:`Locação — ${city}`,data:cut(F('locacao_var12m',city))},{name:'Venda — Brasil',data:cut(F('venda_var12m','BR')),color:'var(--muted)'},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m')),color:'var(--s8)'}],fmt:v=>nf2.format(v)+'%'})}));
+  g.append(chartCard({title:`Preço médio de oferta — ${city} (R$/m²)`,src:'Fipe/ZAP',render:b=>lineChart(b,{series:[{name:'Venda R$/m²',data:cut(F('venda_preco_m2',city))}],fmt:fmtBRL,area:true,labelEnd:true,zero:false})}));
+  g.append(chartCard({title:`Rental yield — aluguel ÷ preço (% ao mês): ${city} × Brasil`,note:'Compare com a Selic mensal: quanto maior o gap, menos atraente o imóvel para investidor.',src:'Fipe/ZAP; BCB',render:b=>lineChart(b,{series:[{name:city,data:cut(F('rental_yield',city))},{name:'Brasil',data:cut(F('rental_yield','BR'))},{name:'Selic a.m.',data:cut(S('bcb_sgs','selic_meta_m').map(p=>[p[0],(Math.pow(1+p[1]/100,1/12)-1)*100])),color:'var(--muted)'}],fmt:v=>nf2.format(v)+'%',labelEnd:true,zero:false})}));
+  const igReg=regionsOf('abecip','igmi_r'); const igCity = igReg.includes(city)?city:'BR';
+  g.append(chartCard({title:`Transação × oferta: IGMI-R e FipeZap indexados (jan/2014 = 100) — ${igCity==='BR'?'Brasil':igCity}`,note:igCity==='BR'&&city!=='São Paulo'?`IGMI-R não cobre ${city}; mostrando Brasil.`:'',src:'ABECIP/FGV; Fipe/ZAP; IBGE',render:b=>{ const ipca=S('bcb_sgs','ipca'); let acc=100; const ipIdx=ipca.filter(p=>p[0]>='2014-01').map(p=>{acc*=1+p[1]/100; return [p[0],acc];}); lineChart(b,{series:[{name:'IGMI-R (transação)',data:cut(S('abecip','igmi_r',igCity))},{name:'FipeZap venda (oferta)',data:cut(index100(F('venda_indice',igCity==='BR'?'BR':igCity),'2014-01'))},{name:'IPCA acumulado',data:cut(ipIdx),color:'var(--muted)'}],fmt:v=>nf.format(v),zero:false,labelEnd:true}); }}));
+  // ranking cidades
+  const cities=regionsOf('fipezap','venda_var12m').filter(c=>c!=='BR'); const rk=cities.map(c=>{const s=F('venda_var12m',c); const l=last(s); return l?{c,v:l[1],d:l[0],p:last(F('venda_preco_m2',c))?.[1]}:null;}).filter(Boolean).sort((a,b)=>b.v-a.v);
+  const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Ranking de cidades — variação do preço de venda em 12 meses (FipeZap)'),el('p',{class:'note'},`${rk.length} cidades · referência ${rk[0]?fmtYMlong(rk[0].d):''}`));
+  const wrap=el('div',{class:'tablewrap'}); const t=el('table'); t.append(el('thead',{},el('tr',{},el('th',{},'#'),el('th',{},'Cidade'),el('th',{class:'n'},'Var. 12m'),el('th',{class:'n'},'R$/m² venda'),el('th',{},''))));
+  const tb=el('tbody'); const mx=Math.max(...rk.map(r=>Math.abs(r.v)));
+  rk.forEach((r,i)=>{ const bar=el('div'); bar.style.cssText=`height:8px;border-radius:4px;background:${r.v>=0?'var(--s1)':'var(--s8)'};width:${Math.abs(r.v)/mx*100}%;min-width:2px`; tb.append(el('tr',{},el('td',{},String(i+1)),el('td',{},r.c),el('td',{class:'n'},fmtPct(r.v)),el('td',{class:'n'},r.p?fmtBRL(r.p):'–'),el('td',{style:'width:30%'},bar))); });
+  t.append(tb); wrap.append(t); card.append(wrap, el('p',{class:'src'},'Fonte: Fipe/ZAP')); g.append(card);
+  root.append(g);
+}
+
+function viewCustos(root){
+  const g=el('div',{class:'grid'});
+  const incc=S('bcb_sgs','incc_di'); const incc12=incc.map((p,i)=>{ if(i<11) return null; let a=1; for(let j=i-11;j<=i;j++) a*=1+incc[j][1]/100; return [p[0],(a-1)*100]; }).filter(Boolean);
+  g.append(chartCard({title:'Custo da construção — INCC-DI e SINAPI, variação em 12 meses (%)',src:'FGV via BCB; IBGE',render:b=>lineChart(b,{series:[{name:'INCC-DI 12m',data:cut(incc12)},{name:'SINAPI 12m',data:cut(S('sidra','sinapi_custo_m2_var12m','BR'))},{name:'IPCA 12m',data:cut(S('bcb_sgs','ipca_12m')),color:'var(--muted)'}],fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
+  g.append(chartCard({title:`SINAPI — custo médio do m² (R$): ${ufName()} × Brasil`,src:'IBGE/Caixa',render:b=>lineChart(b,{series:[{name:ufName(),data:cut(S('sidra','sinapi_custo_m2',uf()))},{name:'Brasil',data:cut(S('sidra','sinapi_custo_m2','BR')),color:'var(--muted)'}].filter((s,i)=>!(i===1&&uf()==='BR')),fmt:fmtBRL,zero:false,labelEnd:true})}));
+  g.append(chartCard({title:'PIB da construção × PIB total — variação contra mesmo trimestre do ano anterior (%)',src:'IBGE — Contas Nacionais Trimestrais',render:b=>lineChart(b,{series:[{name:'Construção',data:cut(S('sidra','pib_construcao_var_aa'))},{name:'PIB total',data:cut(S('sidra','pib_total_var_aa')),color:'var(--muted)'}],fmt:v=>nf.format(v)+'%',freq:'Q',labelEnd:true})}));
+  g.append(chartCard({title:'Juros e inflação: Selic meta, IPCA 12m e TR mensal',src:'BCB; IBGE',render:b=>lineChart(b,{series:[{name:'Selic meta (% a.a.)',data:cut(S('bcb_sgs','selic_meta_m'))},{name:'IPCA 12m (%)',data:cut(S('bcb_sgs','ipca_12m'))},{name:'TR mensal (%)',data:cut(S('bcb_sgs','tr_m'))}],fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
+  g.append(chartCard({title:'Taxa de desocupação (%) e IBC-Br (índice de atividade)',note:'Renda e emprego sustentam a demanda; o IBC-Br é proxy mensal do PIB.',src:'IBGE; BCB',render:b=>lineChart(b,{series:[{name:'Desocupação (%)',data:cut(S('bcb_sgs','desemprego'))}],fmt:v=>nf.format(v)+'%',area:true,labelEnd:true})}));
+  g.append(chartCard({title:'IBC-Br dessazonalizado (índice)',src:'BCB',render:b=>lineChart(b,{series:[{name:'IBC-Br',data:cut(S('bcb_sgs','ibc_br'))}],fmt:v=>nf.format(v),zero:false,area:true,labelEnd:true})}));
+  root.append(g);
+}
+
+function viewImoveis(root){
+  const g=el('div',{class:'grid'}); const R=uf(); const C=k=>S('bcb_olinda',k,R);
+  g.append(el('div',{class:'c12',html:`<p class="note" style="margin:0 0 -4px;color:var(--muted)">Perfil dos imóveis que receberam financiamento — <b>${ufName()}</b>. Valores medianos das avaliações bancárias; distribuição por tipo e dormitórios em % das operações do mês.</p>`}));
+  g.append(chartCard({title:'Valor mediano: avaliação × compra (R$)',src:'BCB',render:b=>lineChart(b,{series:[{name:'Avaliação',data:cut(C('imoveis_valor_avaliacao'))},{name:'Compra e venda',data:cut(C('imoveis_valor_compra'))}],fmt:fmtBRL,zero:false,labelEnd:true})}));
+  g.append(chartCard({title:'Área privativa mediana (m²)',src:'BCB',render:b=>lineChart(b,{series:[{name:'Área privativa',data:cut(C('imoveis_area_privativa'))}],fmt:v=>nf.format(v)+' m²',zero:false,area:true,labelEnd:true})}));
+  const share=(keys)=>{ const ss=keys.map(k=>C(k)); const tot=mergeSum(ss); return ss.map(s=>s.map(p=>{const t=tot.find(q=>q[0]===p[0]); return [p[0],t&&t[1]?p[1]/t[1]*100:0];})); };
+  const [ap,ca]=share(['imoveis_tipo_apartamento','imoveis_tipo_casa']);
+  g.append(chartCard({title:'Tipo do imóvel financiado (% das operações)',src:'BCB',render:b=>barChart(b,{series:[{name:'Apartamento',data:cut(ap)},{name:'Casa',data:cut(ca)}],fmt:v=>nf.format(v)+'%',max:100})}));
+  const dm=share(['imoveis_dormitorio_1','imoveis_dormitorio_2','imoveis_dormitorio_3','imoveis_dormitorio_4_mais']);
+  g.append(chartCard({title:'Dormitórios (% das operações)',src:'BCB',render:b=>barChart(b,{series:[{name:'1 dorm.',data:cut(dm[0])},{name:'2 dorm.',data:cut(dm[1])},{name:'3 dorm.',data:cut(dm[2])},{name:'4+ dorm.',data:cut(dm[3])}],fmt:v=>nf.format(v)+'%',max:100})}));
+  root.append(g);
+}
+
+function viewFontes(root){
+  const g=el('div',{class:'grid'});
+  const meta=PAYLOAD.meta; const order=['bcb_olinda','bcb_sgs','sidra','fipezap','abecip','abrainc','secovi'];
+  const card=el('div',{class:'card c12'}); card.append(el('h3',{},'Fontes coletadas'),el('p',{class:'note'},'Cada fonte tem coletor próprio em painel/collectors/. Rode `python -m painel.collect` para atualizar e `python -m painel.build` para regenerar esta página.'));
+  const t=el('table'); t.append(el('thead',{},el('tr',{},el('th',{},'Fonte'),el('th',{},'Cobertura'),el('th',{class:'n'},'Séries'),el('th',{class:'n'},'Linhas'),el('th',{},'Período'),el('th',{},'Coletado em'),el('th',{},'URL'))));
+  const tb=el('tbody'); for(const k of order){ const m=meta[k]; if(!m) continue; const a=el('a',{href:m.url,target:'_blank',rel:'noopener'},m.url.replace(/^https?:\/\//,'').slice(0,48)); tb.append(el('tr',{},el('td',{},el('b',{},m.title||k)),el('td',{},m.coverage||''),el('td',{class:'n'},nf0.format(m.series)),el('td',{class:'n'},nf0.format(m.rows)),el('td',{},(m.first_date||'').slice(0,7)+' → '+(m.last_date||'').slice(0,7)),el('td',{},(m.collected_at||'').replace('T',' ').slice(0,16)),el('td',{},a))); }
+  t.append(tb); card.append(el('div',{class:'tablewrap'},t)); g.append(card);
+  const c2=el('div',{class:'card c12'}); c2.append(el('h3',{},'Catálogo de séries incluídas no painel'),el('p',{class:'note'},'O catálogo completo (inclusive séries não exibidas) está em data/catalog.csv.'));
+  const t2=el('table'); t2.append(el('thead',{},el('tr',{},el('th',{},'Fonte'),el('th',{},'Série'),el('th',{},'Nome'),el('th',{},'Bloco'),el('th',{},'Unid.'),el('th',{class:'n'},'Regiões'),el('th',{},'Último dado'))));
+  const tb2=el('tbody'); for(const src of Object.keys(D)) for(const [sid,e] of Object.entries(D[src])){ const regs=Object.keys(e.regions); const lastD=Math.max(...regs.map(r=>e.regions[r].length?e.regions[r][e.regions[r].length-1][0].replace('-',''):0)); tb2.append(el('tr',{},el('td',{},src),el('td',{},el('code',{},sid)),el('td',{},e.name),el('td',{},e.block),el('td',{},e.unit),el('td',{class:'n'},String(regs.length)),el('td',{},String(lastD).replace(/(\d{4})(\d{2})/,'$1-$2')))); }
+  t2.append(tb2); c2.append(el('div',{class:'tablewrap'},t2)); g.append(c2);
+  const c3=el('div',{class:'card c12'}); c3.append(el('h3',{},'Limitações conhecidas'),el('ul',{html:'<li>Lançamentos/vendas/estoque: só amostras (Abrainc ≈ 20 incorporadoras; Secovi = cidade de SP). Não há censo nacional aberto.</li><li>BCB publica crédito em R$; o número de unidades vem só da ABECIP (SBPE) — FGTS em unidades depende do Ministério das Cidades (a implementar).</li><li>Séries de LCI/CRI/LIG do BCB terminam em fev/2025; substituir por B3/ANBIMA.</li><li>Secovi: alguns meses de 2024 não foram localizados no padrão de URL dos PDFs.</li><li>FipeZap é preço pedido em anúncios; IGMI-R, preço avaliado em financiamentos. Nenhum é preço de escritura.</li>'})); g.append(c3);
+  root.append(g);
+}
+
+const RENDER={visao:viewVisao,oferta:viewOferta,credito:viewCredito,funding:viewFunding,precos:viewPrecos,custos:viewCustos,imoveis:viewImoveis,fontes:viewFontes};
+
+// ---------- app ----------
+function render(){
+  charts.length=0; document.querySelectorAll('.legend').forEach(l=>l.remove());
+  const views=document.getElementById('views'); views.innerHTML='';
+  const sec=el('section',{role:'tabpanel'}); RENDER[state.view](sec); views.append(sec);
+  document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===state.view));
+  document.getElementById('ufwrap').style.display = ['credito','custos','imoveis'].includes(state.view)?'':'none';
+  document.getElementById('citywrap').style.display = state.view==='precos'?'':'none';
+  document.querySelectorAll('#range button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.y===state.years));
+  location.hash=state.view;
+}
+function init(){
+  document.getElementById('built').textContent=PAYLOAD.built_at;
+  const nav=document.getElementById('nav'); VIEWS.forEach(v=>nav.append(el('button',{role:'tab','data-v':v.id,onclick:()=>{state.view=v.id;render();}},v.label)));
+  const ufs=regionsOf('bcb_olinda','credito_contratacao_contratado_pf_sfh').sort((a,b)=>a==='BR'?-1:b==='BR'?1:(UF_NAMES[a]||a).localeCompare(UF_NAMES[b]||b));
+  const ufSel=document.getElementById('uf'); ufs.forEach(u=>ufSel.append(el('option',{value:u},UF_NAMES[u]||u))); ufSel.value=state.uf; ufSel.onchange=()=>{state.uf=ufSel.value;render();};
+  const cities=regionsOf('fipezap','venda_var12m').filter(c=>c!=='BR').sort((a,b)=>a.localeCompare(b));
+  const citySel=document.getElementById('city'); cities.forEach(c=>citySel.append(el('option',{value:c},c))); if(!cities.includes(state.city)) state.city=cities[0]; citySel.value=state.city; citySel.onchange=()=>{state.city=citySel.value;render();};
+  document.querySelectorAll('#range button').forEach(b=>b.onclick=()=>{state.years=+b.dataset.y;render();});
+  const th=document.getElementById('theme'); try{ th.value=localStorage.getItem('theme')||''; }catch(e){} applyTheme(th.value); th.onchange=()=>{ applyTheme(th.value); try{localStorage.setItem('theme',th.value);}catch(e){} };
+  const h=location.hash.slice(1); if(RENDER[h]) state.view=h;
+  render();
+  let t; window.addEventListener('resize',()=>{ clearTimeout(t); t=setTimeout(()=>{ document.querySelectorAll('.legend').forEach(l=>l.remove()); charts.forEach(c=>c.render(c.box)); },120); });
+}
+function applyTheme(v){ if(v) document.documentElement.setAttribute('data-theme',v); else document.documentElement.removeAttribute('data-theme'); }
+init();
+</script>
+</body>
+</html>

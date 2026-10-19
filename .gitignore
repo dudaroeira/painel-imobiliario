@@ -1,0 +1,10 @@
+# dados baixados e gerados (reconstruídos pelo workflow diário)
+data/raw/
+data/series/
+data/catalog.csv
+dashboard/index.html
+
+__pycache__/
+*.pyc
+.venv/
+.claude/
