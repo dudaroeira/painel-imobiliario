@@ -7,60 +7,80 @@
 <style>
 :root{
   color-scheme:light;
-  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
-  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10); --hover:rgba(11,11,11,.04);
+  --page:#f3f4f7; --surface:#ffffff; --rail:#fafbfc; --ink:#15181e; --ink-2:#4b5563; --muted:#8a919c;
+  --grid:#eef0f3; --axis:#c3c8d1; --border:#e3e6ec; --hover:#eceff4;
+  --accent:#1b4ba3; --accent-soft:#e3ebfa; --accent-ink:#1b4ba3; --hero:#1b4ba3;
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
-  --good:#006300; --bad:#d03b3b; --accent:#2a78d6;
+  --good:#0b7a3b; --bad:#b42318; --good-bg:#e6f4ea; --warn:#8a5a00; --warn-dot:#e39b00; --warn-bg:#fff4d6; --bad-bg:#fde8e6;
+  --mcmv:#0b7a3b; --mcmv-bg:#e6f4ea; --map:#9a3f0c; --map-bg:#fdebd8;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink-2:#c3c2b7; --muted:#898781;
-    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --hover:rgba(255,255,255,.05);
+    --page:#0f1217; --surface:#1a1f29; --rail:#141821; --ink:#e8eaf0; --ink-2:#b3b9c6; --muted:#7c8494;
+    --grid:#232936; --axis:#3a4254; --border:#2a3140; --hover:#1c2230;
+    --accent:#5b8def; --accent-soft:#1f3058; --accent-ink:#a9c3f7; --hero:#1f3f7a;
     --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
-    --good:#0ca30c; --bad:#e66767; --accent:#3987e5;
+    --good:#4cc27a; --bad:#f0716d; --good-bg:#15301f; --warn:#f0c060; --warn-dot:#e39b00; --warn-bg:#3a2e10; --bad-bg:#3b1a1a;
+    --mcmv:#4cc27a; --mcmv-bg:#15301f; --map:#f3a16a; --map-bg:#3a2415;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink-2:#c3c2b7; --muted:#898781;
-  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --hover:rgba(255,255,255,.05);
+  --page:#0f1217; --surface:#1a1f29; --rail:#141821; --ink:#e8eaf0; --ink-2:#b3b9c6; --muted:#7c8494;
+  --grid:#232936; --axis:#3a4254; --border:#2a3140; --hover:#1c2230;
+  --accent:#5b8def; --accent-soft:#1f3058; --accent-ink:#a9c3f7; --hero:#1f3f7a;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
-  --good:#0ca30c; --bad:#e66767; --accent:#3987e5;
+  --good:#4cc27a; --bad:#f0716d; --good-bg:#15301f; --warn:#f0c060; --warn-dot:#e39b00; --warn-bg:#3a2e10; --bad-bg:#3b1a1a;
+  --mcmv:#4cc27a; --mcmv-bg:#15301f; --map:#f3a16a; --map-bg:#3a2415;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-a{color:inherit}
-header{padding:20px 16px 0;max-width:1280px;margin:0 auto}
-h1{font-size:22px;margin:0 0 2px;font-weight:650;letter-spacing:-.01em}
-.sub{color:var(--ink-2);font-size:13px;margin:0 0 14px}
-nav{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--grid)}
-nav button{background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-2);padding:8px 12px;font:inherit;font-weight:500;cursor:pointer;margin-bottom:-1px}
-nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-nav button:hover{background:var(--hover)}
-main{max-width:1280px;margin:0 auto;padding:14px 16px 48px}
-.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px;color:var(--ink-2);font-size:13px}
+html,body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--accent-ink)}
+.app{display:flex;flex-wrap:wrap;min-height:100vh;max-width:1440px;margin:0 auto}
+.rail{flex:0 0 236px;padding:20px 14px;border-right:1px solid var(--border);background:var(--rail);display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 14px 18px}
+.brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.brand b{display:block;font-size:14px;letter-spacing:-.01em}.brand small{color:var(--muted);font-size:11px}
+.rail button{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;border:0;background:none;color:var(--ink-2);font:inherit;font-weight:500;cursor:pointer;text-align:left;width:100%}
+.rail button:hover{background:var(--hover);color:var(--ink)}
+.rail button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.rail svg{flex:0 0 16px}
+.rail .foot{margin-top:auto;padding:14px;font-size:11.5px;color:var(--muted);line-height:1.4}.rail .foot b{color:var(--ink-2)}
+main{flex:999 1 560px;min-width:0;padding:0 28px 48px}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:18px 0 14px;border-bottom:1px solid var(--border)}
+.topbar .t{flex:1 1 320px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:13px;margin:0}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:var(--ink-2);font-size:13px}
 .filters label{display:flex;gap:6px;align-items:center}
-.filters select,.filters .seg{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px}
-.seg{display:inline-flex;padding:2px;gap:2px}
-.seg button{font:inherit;border:0;background:none;color:var(--ink-2);padding:3px 9px;border-radius:4px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--hover);color:var(--ink);font-weight:600}
+.filters select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+.seg{display:inline-flex;gap:6px}
+.seg button{font:inherit;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);padding:6px 12px;border-radius:999px;cursor:pointer}
+.seg button:hover{background:var(--hover)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.vsep{width:1px;height:22px;background:var(--border);margin:0 4px}
 section[hidden]{display:none}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(12,1fr)}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px 10px;min-width:0}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(12,minmax(0,1fr));margin-top:18px}
+.grid+.grid{margin-top:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px 14px;min-width:0}
 .c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}.c8{grid-column:span 8}
+@media(max-width:1100px){.c3{grid-column:span 6}}
 @media(max-width:900px){.c6,.c4,.c8{grid-column:span 12}.c3{grid-column:span 6}}
-@media(max-width:560px){.c3{grid-column:span 12}}
-.card h3{margin:0;font-size:14px;font-weight:600}
-.card .note{margin:2px 0 8px;color:var(--muted);font-size:12px}
-.card .src{margin:6px 0 0;color:var(--muted);font-size:11px}
-.tile .label{color:var(--ink-2);font-size:12px}
-.tile .value{font-size:26px;font-weight:600;line-height:1.15;margin:2px 0}
-.tile.hero .value{font-size:44px}
-.tile .delta{font-size:12px;color:var(--ink-2)}
+@media(max-width:560px){.c3{grid-column:span 12}main{padding:0 16px 40px}.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--border);flex-direction:row;flex-wrap:wrap;padding:12px}.rail .brand{flex-basis:100%;padding-bottom:8px}.rail .foot{display:none}.rail button{width:auto;padding:7px 10px}}
+.card h3{margin:0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2{font-size:16px;margin:0}
+.card .note{margin:2px 0 10px;color:var(--muted);font-size:12px}
+.card .src{margin:8px 0 0;color:var(--muted);font-size:11px}
+.tile .label{color:var(--ink-2);font-size:12.5px;font-weight:500}
+.tile .value{font-size:30px;font-weight:600;line-height:1.15;margin:6px 0 4px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tile.hero{background:var(--hero);border-color:var(--hero);color:#fff}
+.tile.hero .label{color:#c9d7f5}.tile.hero .value{font-size:46px;margin-top:10px}.tile.hero .delta{color:#e3ebfa}.tile.hero .ref{color:#9fb4e0}
+.tile.hero .up{color:#9ee6b4}.tile.hero .down{color:#ffb4a8}
+.tile .delta{font-size:12.5px;color:var(--ink-2)}
 .tile .delta b{font-weight:600}
 .up{color:var(--good)}.down{color:var(--bad)}
-.tile .ref{color:var(--muted);font-size:11px}
+.tile .ref{color:var(--muted);font-size:11.5px;margin-top:4px}
 .chart{position:relative;width:100%;height:260px}
 .chart.tall{height:320px}
 .chart svg{display:block;width:100%;height:100%;overflow:visible}
@@ -75,59 +95,69 @@ section[hidden]{display:none}
 .chart .hit{fill:transparent}
 .chart rect.bar{shape-rendering:crispEdges}
 .chart rect.bar:hover{filter:brightness(1.12)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin:6px 0 0;font-size:12px;color:var(--ink-2)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 0;font-size:12px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;width:14px;height:0;border-top:2px solid;border-radius:1px}
 .legend i.sq{width:10px;height:10px;border:0;border-radius:2px}
-.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:150px;z-index:5;display:none}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.14);min-width:150px;z-index:5;display:none}
 .tip .d{color:var(--muted);margin-bottom:4px}
 .tip .r{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .tip .r i{display:inline-block;width:12px;border-top:2px solid;margin-right:6px}
 .tip .r b{font-weight:600;font-variant-numeric:tabular-nums}
 .tip .r span{color:var(--ink-2)}
 table{border-collapse:collapse;width:100%;font-size:12.5px}
-th,td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+th,td{padding:8px 10px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
-th{color:var(--ink-2);font-weight:600;position:sticky;top:0;background:var(--surface)}
-.tablewrap{max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;background:var(--surface)}
+.tablewrap{max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:10px}
 details summary{cursor:pointer;color:var(--ink-2);font-size:12px;margin-top:6px}
 .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--border);color:var(--ink-2);margin-left:6px}
 .theme{margin-left:auto}
 .empty{color:var(--muted);font-size:12px;padding:20px 0}
-.st{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
-.st i{width:10px;height:10px;border-radius:50%;display:inline-block}
-.st.good i{background:#0ca30c}.st.warn i{background:#fab219}.st.bad i{background:#d03b3b}
-.sem{table-layout:fixed}.sem td{vertical-align:middle}.sem .ref{color:var(--muted);font-size:11.5px}
-.sem th:nth-child(1){width:27%}.sem th:nth-child(2){width:11%}.sem th:nth-child(3){width:12%}.sem th:nth-child(4){width:11%}
+.st{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:12.5px;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.st i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.st.good{background:var(--good-bg);color:var(--good)}.st.good i{background:var(--good)}
+.st.warn{background:var(--warn-bg);color:var(--warn)}.st.warn i{background:var(--warn-dot)}
+.st.bad{background:var(--bad-bg);color:var(--bad)}.st.bad i{background:var(--bad)}
+.seglab{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:6px}
+.seglab.total{background:var(--accent-soft);color:var(--accent-ink)}.seglab.mcmv{background:var(--mcmv-bg);color:var(--mcmv)}.seglab.map{background:var(--map-bg);color:var(--map)}
+.sumbar{display:flex;gap:4px;height:8px;border-radius:4px;overflow:hidden;margin-top:6px}.sumbar span{display:block}
+.sem{table-layout:fixed;min-width:760px}.sem td{vertical-align:middle}.sem .ref{color:var(--muted);font-size:11.5px}
+.sem th:nth-child(1){width:30%}.sem th:nth-child(2){width:11%}.sem th:nth-child(3){width:13%}.sem th:nth-child(4){width:11%}
+.sem td.n{font-size:17px;font-weight:600;letter-spacing:-.01em}.sem td.n+td+td.n{font-size:12.5px;font-weight:400;color:var(--muted)}
 .sem td.n,.sem td:nth-child(3){white-space:nowrap}
 .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);background:none;font:600 11px/1 Georgia,serif;cursor:help;vertical-align:middle;padding:0}
-.info:hover,.info:focus{color:var(--accent);border-color:var(--accent);outline:none}
+.info:hover,.info:focus{color:var(--accent-ink);border-color:var(--accent);outline:none}
 .infobox{font-size:12px;color:var(--ink-2);max-width:420px;line-height:1.4}
 .infobox div+div{margin-top:5px}.infobox b{color:var(--ink)}
 .infobox.inline{max-width:none;margin:4px 0 8px;padding:8px 10px;border-left:2px solid var(--accent);background:var(--hover);border-radius:0 6px 6px 0}
 .sem .formula{color:var(--ink-2);font-size:11.5px;margin-top:2px}.sem .formula b{color:var(--ink);font-weight:600}
 .sem .formula code{font:11px/1.3 ui-monospace,Consolas,monospace}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<header>
-  <h1>Painel Imobiliário Brasil</h1>
-  <p class="sub">Inteligência de mercado consolidada de fontes públicas · dados coletados em <span id="built"></span></p>
-  <nav id="nav" role="tablist"></nav>
-</header>
+<div class="app">
+<nav class="rail" id="nav" role="tablist" aria-label="Seções">
+  <div class="brand"><div class="mark">PI</div><div><b>Painel Imobiliário</b><small>Brasil · fontes públicas</small></div></div>
+</nav>
 <main>
-  <div class="filters" id="filters">
-    <label>Período
+  <div class="topbar">
+    <div class="t"><h1 id="vtitle">Painel Imobiliário Brasil</h1><p class="sub" id="vsub"></p></div>
+    <div class="filters" id="filters">
       <span class="seg" id="range">
         <button data-y="3">3 anos</button><button data-y="5" aria-pressed="true">5 anos</button><button data-y="10">10 anos</button><button data-y="99">Tudo</button>
       </span>
-    </label>
-    <label id="ufwrap">UF <select id="uf"></select></label>
-    <label id="citywrap">Capital (preços) <select id="city"></select></label>
-    <label class="theme">Tema <select id="theme"><option value="">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
+      <span class="vsep"></span>
+      <label id="ufwrap">UF <select id="uf"></select></label>
+      <label id="citywrap">Capital <select id="city"></select></label>
+      <label class="theme">Tema <select id="theme"><option value="">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
+    </div>
   </div>
   <div id="views"></div>
 </main>
+</div>
 <div class="tip" id="tip"></div>
 
 <script>
@@ -271,6 +301,29 @@ function tile({label,value,delta,deltaLabel,ref,hero=false,upGood=true,span=3}){
 const uf = () => state.uf;
 const ufName = () => UF_NAMES[state.uf]||state.uf;
 function section(id,label){ return {id,label}; }
+const ICONS={
+  visao:'<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>',
+  ciclo:'<circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/>',
+  mcmv:'<path d="M2 13V7l6-4 6 4v6"/><path d="M6 13V9h4v4"/>',
+  oferta:'<path d="M2 13h12M4 13V8M8 13V4M12 13V6"/>',
+  credito:'<rect x="2" y="4" width="12" height="9" rx="1.5"/><path d="M2 7h12"/>',
+  funding:'<path d="M3 12c0-3 2-5 5-5s5 2 5 5"/><path d="M8 2v5"/>',
+  precos:'<path d="M2 12l4-5 3 3 5-6"/>',
+  custos:'<path d="M2 3h12v10H2z"/><path d="M5 13V8M8 13V6M11 13V9"/>',
+  imoveis:'<path d="M3 14V5l5-3 5 3v9"/><path d="M7 14v-4h2v4"/>',
+  fontes:'<path d="M3 3h10v10H3z"/><path d="M6 6h4M6 9h4"/>'};
+const SUBS={
+  visao:'Mercado imobiliário brasileiro · dados consolidados de fontes públicas',
+  ciclo:'Indicadores derivados para ler a fase do ciclo — mercado total, MCMV e MAP sempre apartados',
+  mcmv:'CBIC/CII, ~220 cidades, trimestral · MAP = médio e alto padrões = tudo que não é Minha Casa Minha Vida',
+  oferta:'Lançamentos, vendas e estoque: CBIC (nacional), Abrainc-Fipe (amostra) e Secovi-SP (cidade de SP)',
+  credito:'Crédito imobiliário no SFN por fonte de recursos, taxa, LTV, indexador e inadimplência',
+  funding:'De onde vem o dinheiro: poupança SBPE, LCI, CRI, LIG e direcionamento',
+  precos:'Índices de preço de transação: IGMI-R (capitais) e IVG-R/MVG-R (BCB)',
+  custos:'Custo de construção, PIB da construção, juros, inflação e atividade',
+  imoveis:'Perfil dos imóveis financiados: valor, área, tipo e dormitórios',
+  fontes:'Fontes coletadas, catálogo de séries e limitações conhecidas'};
+function icon(id){ const s=svgEl('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor','stroke-width':1.6,'aria-hidden':'true'}); s.innerHTML=ICONS[id]||''; return s; }
 
 // ---------- views ----------
 const VIEWS=[
@@ -525,8 +578,17 @@ function segMetrics(){
 }
 
 /* semTable: linhas [nome, cálculo, série, formatador, status, referência, porquê, trimestral?] */
+function segLabel(title){ const k=/MAP/.test(title)?'map':/MCMV/.test(title)?'mcmv':'total'; const t={map:'MAP · médio e alto padrões',mcmv:'MCMV',total:'Mercado total'}[k]; return el('span',{class:'seglab '+k},t); }
+function sumCard(title, rows, span=4, note=''){
+  const c={good:0,warn:0,bad:0}; rows.forEach(r=>{ if(r[4]) c[r[4]]++; }); const n=c.good+c.warn+c.bad;
+  const card=el('div',{class:`card c${span}`}); card.append(segLabel(title));
+  card.append(el('div',{style:'font-size:13px;color:var(--ink-2);margin-top:8px'},`${n} indicadores · ${c.good} favoráveis · ${c.warn} em atenção · ${c.bad} desfavoráveis`));
+  const bar=el('div',{class:'sumbar'}); for(const [k,col] of [['good','var(--good)'],['warn','var(--warn-dot)'],['bad','var(--bad)']]){ if(c[k]){ const s=el('span'); s.style.cssText=`flex:${c[k]};background:${col}`; bar.append(s);} } card.append(bar);
+  if(note) card.append(el('div',{class:'note',style:'margin:8px 0 0'},note));
+  return card;
+}
 function semCard(title, note, rows, span=12){
-  const card=el('div',{class:`card c${span}`}); card.append(el('h3',{},title)); if(note) card.append(el('p',{class:'note'},note));
+  const card=el('div',{class:`card c${span}`}); card.append(el('h3',{},segLabel(title),'Semáforo')); if(note) card.append(el('p',{class:'note'},note));
   const t=el('table',{class:'sem'}); t.append(el('thead',{},el('tr',{},el('th',{},'Indicador e fórmula'),el('th',{class:'n'},'Atual'),el('th',{},'Leitura'),el('th',{class:'n'},'12 meses antes'),el('th',{},'Faixas e significado'))));
   const tb=el('tbody');
   for(const [nm,key,s,f,st,ref,why,isQ] of rows){ const L=last(s); const pv = isQ ? (s.length>4?s[s.length-5]:null) : (s.length>12?s[s.length-13]:null);
@@ -572,6 +634,8 @@ function viewCiclo(root){
     ['Cobertura da carteira pela poupança','cobertura',K.cobertura,v=>nf.format(v)+'%',status(lv(K.cobertura),[75,90]),'< 75% folga · > 90% funding esgotando','',false],
     ['Inadimplência SFH','inad',K.inad,v=>nf2.format(v)+'%',status(lv(K.inad),[1.5,2.5]),'< 1,5% favorável · > 2,5% desfavorável','',false],
   ];
+  const rowsM=segRows(SG.mcmv,'mcmv'), rowsP=segRows(SG.map,'map');
+  g.append(sumCard('Mercado total',rows), sumCard('MCMV',rowsM,4,'giro rápido, mas lançando acima do que vende'), sumCard('MAP',rowsP,4,'equilíbrio de estoque; vendas sensíveis a juros'));
   g.append(semCard('Semáforo — mercado total','Valor mais recente de cada indicador, sua leitura e o valor de 12 meses antes. Verde/amarelo/vermelho sempre acompanhados do rótulo.',rows));
   g.append(semCard('Semáforo — MCMV','Minha Casa Minha Vida, Brasil (~220 cidades, CBIC/CII). Faixas calibradas para um segmento de giro rápido.',segRows(SG.mcmv,'mcmv')));
   g.append(semCard('Semáforo — MAP (médio e alto padrões)','Tudo que não é MCMV, Brasil (~220 cidades, CBIC/CII). Faixas calibradas para um segmento sensível a juros e com estoque estrutural maior.',segRows(SG.map,'map')));
@@ -616,6 +680,7 @@ function render(){
   charts.length=0; document.querySelectorAll('.legend').forEach(l=>l.remove());
   const views=document.getElementById('views'); views.innerHTML='';
   const sec=el('section',{role:'tabpanel'}); RENDER[state.view](sec); views.append(sec);
+  const v=VIEWS.find(x=>x.id===state.view); document.getElementById('vtitle').textContent=v?v.label:'Painel Imobiliário Brasil'; document.getElementById('vsub').textContent=SUBS[state.view]||'';
   document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===state.view));
   document.getElementById('ufwrap').style.display = ['credito','custos','imoveis'].includes(state.view)?'':'none';
   document.getElementById('range').parentElement.style.display = state.view==='fontes'?'none':'';
@@ -624,8 +689,8 @@ function render(){
   location.hash=state.view;
 }
 function init(){
-  document.getElementById('built').textContent=PAYLOAD.built_at;
-  const nav=document.getElementById('nav'); VIEWS.forEach(v=>nav.append(el('button',{role:'tab','data-v':v.id,onclick:()=>{state.view=v.id;render();}},v.label)));
+  const nav=document.getElementById('nav'); VIEWS.forEach(v=>nav.append(el('button',{role:'tab','data-v':v.id,onclick:()=>{state.view=v.id;render();}},icon(v.id),v.label)));
+  nav.append(el('div',{class:'foot'},'Atualização automática diária às 06:00. Última coleta: ',el('b',{},PAYLOAD.built_at),'.'));
   const ufs=regionsOf('bcb_olinda','credito_contratacao_contratado_pf_sfh').sort((a,b)=>a==='BR'?-1:b==='BR'?1:(UF_NAMES[a]||a).localeCompare(UF_NAMES[b]||b));
   const ufSel=document.getElementById('uf'); ufs.forEach(u=>ufSel.append(el('option',{value:u},UF_NAMES[u]||u))); ufSel.value=state.uf; ufSel.onchange=()=>{state.uf=ufSel.value;render();};
   const cities=regionsOf('abecip','igmi_r').filter(c=>c!=='BR').sort((a,b)=>a.localeCompare(b));
