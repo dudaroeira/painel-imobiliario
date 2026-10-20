@@ -23,6 +23,7 @@ Abra `dashboard/index.html` no navegador — não precisa de servidor. Para atua
 | `sidra` | IBGE — SIDRA | SINAPI (custo m² por UF), PIB da construção e total | API JSON |
 | `abecip` | ABECIP | Unidades e R$ financiados com SBPE (construção × aquisição); IGMI-R (preço de transação, Brasil + 10 capitais) | XLSX (link raspado da página) |
 | `cbic` | CBIC/CII + Brain | Indicadores Imobiliários Nacionais: lançamentos, vendas e oferta final por região, trimestral, ~220 cidades | PDF público das coletivas (tabelas por região) |
+| `b3` | B3 — Boletim Diário do Mercado | Estoque registrado de LCI, LIG, CRI e LCA (volume em mercado), último dia útil do mês; emenda as séries do BCB encerradas em fev/2025 | PDF público do boletim (um por mês; incremental) |
 | `abrainc` | Abrainc-Fipe | Lançamentos, vendas, entregas, distratos, oferta, VGV por segmento (MCMV × MAP) | XLSX série histórica (link raspado) |
 | `secovi` | Secovi-SP — PMI | Lançamentos, vendas, oferta, VSO, VGV/VGL/VGO — cidade de São Paulo | PDF mensal (quadro-resumo da pág. 4) |
 

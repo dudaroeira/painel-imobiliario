@@ -47,6 +47,7 @@ SELECT = {
     "abrainc": None,  # todas
     "secovi": None,
     "cbic": None,
+    "b3": None,
 }
 START = "2012-01-01"
 
