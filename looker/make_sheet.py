@@ -13,7 +13,7 @@ from xml.sax.saxutils import escape
 BASE = "https://dudaroeira.github.io/painel-imobiliario/data/sheets/"
 SHEETS = ["credito_contratado", "credito_taxa_ltv", "credito_indexador", "credito_carteira",
           "credito_inadimplencia", "funding", "oferta_cbic", "oferta_amostras", "precos",
-          "imoveis", "macro_custos", "series"]
+          "imoveis", "macro_custos", "series", "indicadores"]
 OUT = Path(__file__).with_name("painel_sheets.xlsx")
 
 
