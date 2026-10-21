@@ -10,3 +10,4 @@ __pycache__/
 .claude/
 design-mockup/
 dashboard/data/
+looker/painel_sheets.xlsx

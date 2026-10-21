@@ -1,44 +1,64 @@
 # Looker Studio (gratuito) sobre os dados do painel
 
-O site publica, a cada atualização, os dados em formato longo em
-`https://dudaroeira.github.io/painel-imobiliario/data/` (um CSV por tema + `index.json`).
-O Looker Studio não lê URLs diretamente; a ponte gratuita é uma planilha Google que se
-atualiza sozinha com o script deste diretório.
+A cadeia é toda automática e sem custo:
 
-## 1. Criar a planilha-ponte (uma vez, ~5 minutos)
+1. **Site** (GitHub Actions, todo dia às 06h de Brasília) coleta as fontes e publica CSVs enxutos em
+   `https://dudaroeira.github.io/painel-imobiliario/data/sheets/` (`series_id, region, date_key, value`)
+   mais o dicionário `series.csv` (nome, bloco, unidade e frequência de cada série).
+2. **Planilha-ponte** no Google Drive: cada aba tem só a fórmula
+   `=IMPORTDATA("…/data/sheets/<aba>.csv"; ","; "en_US")` na célula A1. O Google Sheets reexecuta a
+   importação sozinho (cerca de uma vez por hora), sem script nem gatilho.
+3. **Looker Studio** lê as abas da planilha; o cache dele renova a cada 12 horas (ajustável em
+   *Recurso → Gerenciar fontes de dados → Atualização dos dados*).
 
-1. Em [sheets.new](https://sheets.new) crie uma planilha chamada **Painel Imobiliário — dados**.
-2. Menu **Extensões → Apps Script**. Apague o conteúdo e cole o arquivo [`apps-script.gs`](apps-script.gs). Salve (ícone de disquete).
-3. Clique em **Executar** com a função `atualizarTudo` selecionada. Na primeira vez o Google pede autorização
-   (acesso à planilha e a URLs externas) — aceite. Em ~1 minuto as abas `credito_uf`, `funding`, `oferta_cbic`,
-   `oferta_amostras`, `precos`, `imoveis`, `macro_custos` e `_meta` aparecem preenchidas.
-4. No Apps Script, ícone de **relógio (Gatilhos) → Adicionar gatilho**: função `atualizarTudo`, origem
-   *Acionador de tempo*, *Timer diário*, entre 7h e 8h. A planilha passa a se atualizar todo dia depois do site.
+Planilha atual: [Painel Imobiliário — dados (Looker)](https://docs.google.com/spreadsheets/d/1P6lHKtxmYiZdbf2EelqBSYiFiytCzgs4-iScZYJHNu0/edit)
+(pasta *Painel Imobiliário — dados para Looker* no Drive).
 
-## 2. Conectar o Looker Studio
+## Recriar a planilha (se precisar)
 
-1. Em [lookerstudio.google.com](https://lookerstudio.google.com) → **Criar → Fonte de dados → Planilhas Google** → escolha a planilha e a aba (comece por `credito_uf`).
-2. Confira os tipos: `date` = Data (AAAA-MM-DD), `value` = Número, os demais = Texto. Clique em **Conectar**.
-3. Repita para as outras abas que quiser (uma fonte de dados por aba). Elas podem ser combinadas num mesmo relatório.
+```bash
+python looker/make_sheet.py
+```
 
-## 3. Montar as visões (sugestão de partida)
+Gera `looker/painel_sheets.xlsx`. Envie ao Google Drive, abra com o Google Planilhas e clique em
+**Permitir acesso** no aviso da primeira aba (autoriza as URLs externas para todas as abas).
 
-Dimensões úteis em todas as abas: `series_id` (o que medir), `region` (UF / região / capital), `date`.
+Por que o terceiro argumento `"en_US"`: os CSVs usam ponto decimal. Sem ele, uma planilha em pt-BR lê
+`9.13` como data (9 de janeiro) e o valor vira um número de série como 46031.
 
-| Visão | Fonte | Como montar |
+## Conectar o Looker Studio
+
+Link que cria um relatório já ligado à aba `credito_contratado` (clique em **Salvar e compartilhar**):
+
+<https://datastudio.google.com/reporting/create?c.mode=edit&r.reportName=Painel%20Imobili%C3%A1rio%20%E2%80%94%20BI&ds.connector=googleSheets&ds.datasourceName=credito_contratado&ds.spreadsheetId=1P6lHKtxmYiZdbf2EelqBSYiFiytCzgs4-iScZYJHNu0&ds.worksheetId=590064066&ds.hasHeader=true&ds.refreshFields=true>
+
+Para outras abas: no relatório, **Adicionar dados → Planilhas Google →** a planilha **→** a aba.
+
+Na fonte de dados, ajuste os tipos:
+
+| Campo | Tipo |
+|---|---|
+| `date_key` | Data e hora → *Data (AAAAMMDD)* |
+| `value` | Número (agregação SUM para fluxos em R$; AVG para taxas, LTV, índices e saldos) |
+| `region` | Texto; para mapa use *Geo → Subdivisão do país (1º nível)* nas abas com UF |
+| `series_id` | Texto |
+
+Para ver nomes legíveis, faça uma **mesclagem** (Recurso → Gerenciar mesclagens) entre a aba de dados e a
+aba `series`, chave `series_id`, trazendo `name` e `unit`.
+
+## Visões sugeridas
+
+| Visão | Aba | Como montar |
 |---|---|---|
-| Crédito por UF | `credito_uf` | Mapa geográfico (dimensão `region`, tipo *Subregião* do Brasil) + filtro `series_id` = `credito_contratacao_contratado_pf_sfh`; métrica `value` SUM; intervalo de data = últimos 12 meses |
-| Comparação de UFs no tempo | `credito_uf` | Série temporal, quebra por `region`, controle de filtro para `region` e `series_id` |
-| Taxa × LTV × inadimplência | `credito_uf` | Tabela dinâmica com `series_id` nas colunas e `region` nas linhas, data = último mês |
-| Oferta por região e segmento | `oferta_cbic` | Colunas empilhadas: dimensão `date`, quebra `region`, filtro `series_id` (`lancamentos`, `vendas`, `oferta`, `lancamentos_mcmv`, `lancamentos_map`…) |
+| Crédito por UF | `credito_contratado` | Mapa geográfico (`region`), filtro `series_id = credito_contratacao_contratado_pf_sfh`, SUM de `value`, últimos 12 meses |
+| Comparação de UFs no tempo | `credito_contratado` | Série temporal por `date_key`, quebra por `region`, controles de lista para `region` e `series_id` |
+| Taxa e LTV por UF | `credito_taxa_ltv` | Tabela dinâmica: `region` nas linhas, `series_id` nas colunas, AVG de `value`, último mês |
+| Inadimplência | `credito_inadimplencia` | Série temporal, AVG, filtro de `region` |
+| Oferta por região e segmento | `oferta_cbic` | Colunas empilhadas: `date_key`, quebra `region`, filtro `series_id` (`lancamentos`, `vendas`, `oferta`, `*_mcmv`, `*_map`) |
 | Preços por capital | `precos` | Série temporal, filtro `series_id = igmi_r`, quebra `region` |
-
-Dicas: use **Controles → Lista suspensa** para `series_id` e `region` no topo do relatório (viram filtros globais);
-em métricas de fluxo (crédito contratado) use SUM com agregação por mês ou trimestre; em taxas, LTV, índices e
-estoques use AVG ou "último valor" (ordenar por data e limitar a 1).
 
 ## Limites
 
-- Planilhas Google: 10 milhões de células; hoje os dados somam ~1,2 milhão (a maior aba, `credito_uf`, tem ~100 mil linhas).
-- O script do Google tem cota de 20 mil chamadas de URL por dia; usamos 8.
-- Se um dia a planilha ficar lenta, o mesmo CSV pode ir para o BigQuery (nível gratuito: 10 GB e 1 TB de consultas/mês).
+- IMPORTDATA recusa arquivos grandes; por isso os CSVs de crédito são divididos por família e ficam até ~1,5 MB.
+- O Google Sheets aceita 10 milhões de células; a planilha usa ~0,6 milhão.
+- Se um dia ficar lento, os CSVs completos (`/data/*.csv`) podem ir para o BigQuery (nível gratuito).
