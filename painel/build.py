@@ -121,7 +121,9 @@ def export_bi(df: pd.DataFrame):
     for name, pick in BI_FILES.items():
         part = pick(df).copy()
         part["date"] = part["date"].str[:10]
-        cols = ["source", "series_id", "name", "region", "unit", "freq", "date", "value"]
+        # date_key (AAAAMMDD, inteiro): o Looker Studio lê como Data sem depender da formatação da planilha
+        part["date_key"] = part["date"].str.replace("-", "").astype(int)
+        cols = ["source", "series_id", "name", "region", "unit", "freq", "date", "date_key", "value"]
         part[cols].to_csv(out / f"{name}.csv", index=False, encoding="utf-8")
         index.append({"file": f"{name}.csv", "rows": int(len(part)), "series": int(part.series_id.nunique()),
                       "first": part.date.min() if len(part) else None, "last": part.date.max() if len(part) else None})
