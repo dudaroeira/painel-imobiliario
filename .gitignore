@@ -9,3 +9,4 @@ __pycache__/
 .venv/
 .claude/
 design-mockup/
+dashboard/data/
