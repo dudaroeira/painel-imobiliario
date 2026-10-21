@@ -131,7 +131,7 @@ def export_bi(df: pd.DataFrame):
                                                ensure_ascii=False, indent=1), encoding="utf-8")
     print("BI: " + ", ".join(f"{i['file']} ({i['rows']:,})" for i in index))
     # versão enxuta para o Google Sheets / Looker Studio (IMPORTDATA recusa arquivos grandes):
-    # colunas em português, rótulo curto da série, nome da região, nível geográfico e mês (AAAAMM01)
+    # colunas em português, rótulo curto da série, nome da região, nível geográfico e mês (AAAA-MM-01)
     lite = out / "sheets"
     lite.mkdir(exist_ok=True)
     sizes = {}
@@ -140,7 +140,7 @@ def export_bi(df: pd.DataFrame):
         part["serie"] = [serie_label(s, i, n) for s, i, n in zip(part["source"], part["series_id"], part["name"])]
         part["regiao"] = part["region"].map(lambda r: UF_NAMES.get(r, r))
         part["nivel"] = [nivel(src, r) for src, r in zip(part["source"], part["region"])]
-        part["mes"] = (part["date"].str[:7].str.replace("-", "") + "01").astype(int)  # AAAAMMDD, dia 1: o Looker lê como Data
+        part["mes"] = part["date"].str[:7] + "-01"  # AAAA-MM-01: o Sheets importa como data e o Looker lê como Data
         # R$ grandes sem centavos; demais com até 4 casas
         big = part["value"].abs() >= 1e5
         part["valor"] = part["value"].round(4)
