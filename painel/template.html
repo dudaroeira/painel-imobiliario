@@ -333,6 +333,7 @@ const ICONS={
   precos:'<path d="M2 12l4-5 3 3 5-6"/>',
   custos:'<path d="M2 3h12v10H2z"/><path d="M5 13V8M8 13V6M11 13V9"/>',
   imoveis:'<path d="M3 14V5l5-3 5 3v9"/><path d="M7 14v-4h2v4"/>',
+  bi:'<rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 11V8M8 11V5M11 11V7"/>',
   fontes:'<path d="M3 3h10v10H3z"/><path d="M6 6h4M6 9h4"/>'};
 const SUBS={
   visao:'Mercado imobiliário brasileiro · dados consolidados de fontes públicas',
@@ -344,13 +345,14 @@ const SUBS={
   precos:'Índices de preço de transação: IGMI-R (capitais) e IVG-R/MVG-R (BCB)',
   custos:'Custo de construção, PIB da construção, juros, inflação e atividade',
   imoveis:'Perfil dos imóveis financiados: valor, área, tipo e dormitórios',
+  bi:'Relatório interativo no Looker Studio (11 páginas) · acesso restrito às contas convidadas',
   fontes:'Fontes coletadas, catálogo de séries e limitações conhecidas'};
 function icon(id){ const s=svgEl('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor','stroke-width':1.6,'aria-hidden':'true'}); s.innerHTML=ICONS[id]||''; return s; }
 
 // ---------- views ----------
 const VIEWS=[
   section('visao','Visão geral'), section('ciclo','Ciclo'), section('mcmv','MCMV × MAP'), section('oferta','Oferta primária'), section('credito','Crédito'), section('funding','Funding'),
-  section('precos','Preços'), section('custos','Custos & macro'), section('imoveis','Perfil dos imóveis'), section('fontes','Fontes & catálogo')
+  section('precos','Preços'), section('custos','Custos & macro'), section('imoveis','Perfil dos imóveis'), section('bi','BI (Looker)'), section('fontes','Fontes & catálogo')
 ];
 
 function viewVisao(root){
@@ -590,6 +592,19 @@ function viewImoveis(root){
   root.append(g);
 }
 
+const LOOKER_ID='983431e2-c597-41cb-8b1b-69c86977cff8';
+function viewBi(root){
+  const g=el('div',{class:'grid'});
+  const card=el('div',{class:'card c12'});
+  const open=el('a',{href:`https://lookerstudio.google.com/reporting/${LOOKER_ID}`,target:'_blank',rel:'noopener'},'Abrir no Looker Studio ↗');
+  card.append(el('h3',{},'Relatório BI'),
+    el('p',{class:'note'},'Use o menu lateral do relatório para trocar de página. Escolha "BR" ou uma região no filtro de região: com o filtro vazio, o gráfico no tempo soma o total Brasil com as regiões. Se aparecer pedido de acesso, entre no Google com uma conta convidada. ',open));
+  const frame=el('iframe',{src:`https://datastudio.google.com/embed/reporting/${LOOKER_ID}`,title:'Relatório BI no Looker Studio',loading:'lazy',allowfullscreen:'',
+    sandbox:'allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox',
+    style:'width:100%;height:max(640px,calc(100vh - 220px));border:0;border-radius:8px;background:#fff;margin-top:8px'});
+  card.append(frame); g.append(card); root.append(g);
+}
+
 function viewFontes(root){
   const g=el('div',{class:'grid'});
   const meta=PAYLOAD.meta; const order=['bcb_olinda','bcb_sgs','sidra','abecip','cbic','abrainc','secovi','b3'];
@@ -804,7 +819,7 @@ function viewMcmv(root){
   root.append(g);
 }
 
-const RENDER={visao:viewVisao,ciclo:viewCiclo,mcmv:viewMcmv,oferta:viewOferta,credito:viewCredito,funding:viewFunding,precos:viewPrecos,custos:viewCustos,imoveis:viewImoveis,fontes:viewFontes};
+const RENDER={visao:viewVisao,ciclo:viewCiclo,mcmv:viewMcmv,oferta:viewOferta,credito:viewCredito,funding:viewFunding,precos:viewPrecos,custos:viewCustos,imoveis:viewImoveis,bi:viewBi,fontes:viewFontes};
 
 // ---------- app ----------
 function render(){
@@ -814,7 +829,7 @@ function render(){
   const v=VIEWS.find(x=>x.id===state.view); document.getElementById('vtitle').textContent=v?v.label:'Painel Imobiliário Brasil'; document.getElementById('vsub').textContent=SUBS[state.view]||'';
   document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===state.view));
   document.getElementById('ufwrap').style.display = ['credito','custos','imoveis'].includes(state.view)?'':'none';
-  document.getElementById('range').parentElement.style.display = state.view==='fontes'?'none':'';
+  document.getElementById('range').parentElement.style.display = ['fontes','bi'].includes(state.view)?'none':'';
   document.getElementById('citywrap').style.display = state.view==='precos'?'':'none';
   document.querySelectorAll('#range button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.y===state.years));
   location.hash=state.view;
