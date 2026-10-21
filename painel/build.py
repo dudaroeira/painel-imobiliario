@@ -131,7 +131,7 @@ def export_bi(df: pd.DataFrame):
                                                ensure_ascii=False, indent=1), encoding="utf-8")
     print("BI: " + ", ".join(f"{i['file']} ({i['rows']:,})" for i in index))
     # versão enxuta para o Google Sheets / Looker Studio (IMPORTDATA recusa arquivos grandes):
-    # colunas em português, rótulo curto da série, nome da região, nível geográfico e mês (AAAA-MM-01)
+    # colunas em português, rótulo curto da série, nome da região, tema e mês (AAAA-MM-01)
     lite = out / "sheets"
     lite.mkdir(exist_ok=True)
     sizes = {}
@@ -139,7 +139,7 @@ def export_bi(df: pd.DataFrame):
         part = pick(df).copy()
         part["serie"] = [serie_label(s, i, n) for s, i, n in zip(part["source"], part["series_id"], part["name"])]
         part["regiao"] = part["region"].map(lambda r: UF_NAMES.get(r, r))
-        part["nivel"] = [nivel(src, r) for src, r in zip(part["source"], part["region"])]
+        part["tema"] = TEMAS[name]
         part["mes"] = part["date"].str[:7] + "-01"  # AAAA-MM-01: o Sheets importa como data e o Looker lê como Data
         # R$ grandes sem centavos; demais com até 4 casas
         big = part["value"].abs() >= 1e5
@@ -148,7 +148,7 @@ def export_bi(df: pd.DataFrame):
         dup = part.drop_duplicates(["source", "series_id"]).groupby("serie").size()
         assert (dup == 1).all(), f"rótulos repetidos em {name}: {list(dup[dup > 1].index)}"
         p = lite / f"{name}.csv"
-        part[["serie", "regiao", "nivel", "mes", "valor"]].to_csv(p, index=False, encoding="utf-8", float_format="%.10g")
+        part[["serie", "regiao", "tema", "mes", "valor"]].to_csv(p, index=False, encoding="utf-8", float_format="%.10g")
         sizes[name] = p.stat().st_size
     d = df.drop_duplicates(["source", "series_id"]).copy()
     d["serie"] = [serie_label(s, i, n) for s, i, n in zip(d["source"], d["series_id"], d["name"])]
@@ -156,6 +156,11 @@ def export_bi(df: pd.DataFrame):
     kpis(df).to_csv(lite / "indicadores.csv", index=False, encoding="utf-8", float_format="%.10g")
     print("Sheets: " + ", ".join(f"{k} ({v/1e3:.0f} KB)" for k, v in sizes.items()))
 
+
+# código curto do tema de cada aba: o Looker lê a aba "tudo" (todas empilhadas) e filtra cada página pelo tema
+TEMAS = {"credito_contratado": "cred", "credito_taxa_ltv": "taxa", "credito_indexador": "idx", "credito_carteira": "cart",
+         "credito_inadimplencia": "inad", "funding": "fund", "oferta_cbic": "cbic", "oferta_amostras": "amos",
+         "precos": "prec", "imoveis": "imov", "macro_custos": "macro"}
 
 UF_NAMES = {"BR": "Brasil", "AC": "Acre", "AL": "Alagoas", "AM": "Amazonas", "AP": "Amapá", "BA": "Bahia", "CE": "Ceará",
             "DF": "Distrito Federal", "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão", "MG": "Minas Gerais",
