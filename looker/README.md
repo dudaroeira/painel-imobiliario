@@ -28,6 +28,28 @@ Gera `looker/painel_sheets.xlsx`. Envie ao Google Drive, abra com o Google Plani
 Por que o terceiro argumento `"en_US"`: os CSVs usam ponto decimal. Sem ele, uma planilha em pt-BR lê
 `9.13` como data (9 de janeiro) e o valor vira um número de série como 46031.
 
+### Páginas do relatório
+
+Cada página tem a mesma estrutura: ranking por região (tabela), série no tempo e dois filtros (região e série).
+A série padrão de cada página aparece no filtro `series_id`; troque por qualquer outra da aba `series`.
+
+| Página | Aba da planilha | Série padrão | Agregação |
+|---|---|---|---|
+| Crédito contratado | `credito_contratado` | `credito_contratacao_contratado_pf_sfh` | Soma |
+| Taxa de juros e LTV | `credito_taxa_ltv` | `credito_contratacao_taxa_pf_sfh` | Média |
+| Carteira de crédito | `credito_carteira` | `credito_estoque_carteira_credito_pf_sfh` | Média |
+| Inadimplência | `credito_inadimplencia` | `credito_estoque_inadimplencia_pf_sfh` | Média |
+| Funding | `funding` | `fontes_sbpe_saldo` | Média |
+| Preços | `precos` | `igmi_r` | Média |
+| Perfil dos imóveis | `imoveis` | `imoveis_valor_avaliacao` | Média |
+| Custos e macro | `macro_custos` | `sinapi_custo_m2` | Média |
+| Crédito por indexador | `credito_indexador` | `credito_contratacao_indexador_pf_ipca` | Soma |
+| Oferta CBIC | `oferta_cbic` | `lancamentos` | Soma |
+| Abrainc e Secovi-SP | `oferta_amostras` | `vendas_total` | Soma |
+
+Atenção: a série no tempo soma (ou faz a média de) todas as regiões visíveis. Como o total `BR` convive com as
+UFs/regiões nas mesmas abas, escolha `BR` ou uma região no filtro para ler o gráfico corretamente.
+
 ## Conectar o Looker Studio
 
 Link que cria um relatório já ligado à aba `credito_contratado` (clique em **Salvar e compartilhar**):
