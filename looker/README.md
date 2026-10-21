@@ -14,6 +14,8 @@ A cadeia é toda automática e sem custo:
 Planilha atual: [Painel Imobiliário — dados (Looker)](https://docs.google.com/spreadsheets/d/1P6lHKtxmYiZdbf2EelqBSYiFiytCzgs4-iScZYJHNu0/edit)
 (pasta *Painel Imobiliário — dados para Looker* no Drive).
 
+Relatório: [Painel Imobiliário — BI](https://lookerstudio.google.com/reporting/983431e2-c597-41cb-8b1b-69c86977cff8).
+
 ## Recriar a planilha (se precisar)
 
 ```bash
