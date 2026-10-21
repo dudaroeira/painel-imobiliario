@@ -130,6 +130,20 @@ def export_bi(df: pd.DataFrame):
     (out / "index.json").write_text(json.dumps({"built_at": dt.datetime.now().isoformat(timespec="minutes"), "files": index},
                                                ensure_ascii=False, indent=1), encoding="utf-8")
     print("BI: " + ", ".join(f"{i['file']} ({i['rows']:,})" for i in index))
+    # versão enxuta para o Google Sheets (IMPORTDATA recusa arquivos grandes): só as colunas-chave,
+    # valores arredondados; o dicionário das séries vai num arquivo à parte
+    lite = out / "sheets"
+    lite.mkdir(exist_ok=True)
+    sizes = {}
+    for name, pick in BI_FILES.items():
+        part = pick(df).copy()
+        part["date_key"] = part["date"].str[:10].str.replace("-", "").astype(int)
+        part["value"] = part["value"].round(4)
+        p = lite / f"{name}.csv"
+        part[["series_id", "region", "date_key", "value"]].to_csv(p, index=False, encoding="utf-8")
+        sizes[name] = p.stat().st_size
+    df.drop_duplicates(["source", "series_id"])[["source", "series_id", "name", "block", "unit", "freq"]].to_csv(lite / "series.csv", index=False, encoding="utf-8")
+    print("Sheets: " + ", ".join(f"{k} ({v/1e3:.0f} KB)" for k, v in sizes.items()))
 
 
 if __name__ == "__main__":
