@@ -99,7 +99,12 @@ def main():
 
 # CSVs em formato longo publicados junto com o site (dashboard/data/), para BI externo (Looker Studio etc.)
 BI_FILES = {
-    "credito_uf": lambda d: d[(d.source == "bcb_olinda") & (d.block == "credito")],
+    # crédito por UF dividido por família para manter cada arquivo pequeno (IMPORTDATA do Google Sheets)
+    "credito_contratado": lambda d: d[(d.source == "bcb_olinda") & d.series_id.str.startswith("credito_contratacao_contratado")],
+    "credito_taxa_ltv": lambda d: d[(d.source == "bcb_olinda") & (d.series_id.str.startswith("credito_contratacao_taxa") | d.series_id.str.startswith("credito_contratacao_ltv"))],
+    "credito_indexador": lambda d: d[(d.source == "bcb_olinda") & d.series_id.str.startswith("credito_contratacao_indexador")],
+    "credito_carteira": lambda d: d[(d.source == "bcb_olinda") & (d.series_id.str.startswith("credito_estoque_carteira") | d.series_id.str.startswith("credito_estoque_parcela"))],
+    "credito_inadimplencia": lambda d: d[(d.source == "bcb_olinda") & d.series_id.str.startswith("credito_estoque_inadimplencia")],
     "funding": lambda d: d[(d.block == "funding")],
     "oferta_cbic": lambda d: d[d.source == "cbic"],
     "oferta_amostras": lambda d: d[d.source.isin(["abrainc", "secovi"])],
