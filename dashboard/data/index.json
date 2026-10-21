@@ -1,0 +1,54 @@
+{
+ "built_at": "2026-10-21T12:13",
+ "files": [
+  {
+   "file": "credito_uf.csv",
+   "rows": 100760,
+   "series": 27,
+   "first": "2014-04-01",
+   "last": "2026-07-01"
+  },
+  {
+   "file": "funding.csv",
+   "rows": 1210,
+   "series": 12,
+   "first": "2012-01-01",
+   "last": "2026-09-01"
+  },
+  {
+   "file": "oferta_cbic.csv",
+   "rows": 342,
+   "series": 12,
+   "first": "2023-01-01",
+   "last": "2026-04-01"
+  },
+  {
+   "file": "oferta_amostras.csv",
+   "rows": 3266,
+   "series": 30,
+   "first": "2014-01-01",
+   "last": "2026-08-01"
+  },
+  {
+   "file": "precos.csv",
+   "rows": 1955,
+   "series": 3,
+   "first": "2014-01-01",
+   "last": "2026-08-01"
+  },
+  {
+   "file": "imoveis.csv",
+   "rows": 25588,
+   "series": 9,
+   "first": "2018-01-01",
+   "last": "2026-06-01"
+  },
+  {
+   "file": "macro_custos.csv",
+   "rows": 6725,
+   "series": 14,
+   "first": "2012-01-01",
+   "last": "2026-10-01"
+  }
+ ]
+}

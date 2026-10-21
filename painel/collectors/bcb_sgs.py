@@ -32,17 +32,31 @@ def _parse_date(s: str) -> str:
 
 def collect(start="01/01/2008", refresh: bool = True):
     out, ok = [], []
-    # séries diárias: a API exige dataFinal e janela de até ~8 anos (senão devolve HTML "Requisição inválida")
+    # séries diárias: a API exige dataFinal e janela de até ~8 anos (senão devolve HTML "Requisição inválida"),
+    # por isso o histórico desde `start` é baixado em janelas menores
     today = dt.date.today()
-    start_daily = today.replace(year=today.year - 8).strftime("%d/%m/%Y")
+    windows = []
+    w0 = dt.datetime.strptime(start, "%d/%m/%Y").date()
+    while w0 < today:
+        w1 = min(today, w0.replace(year=w0.year + 5) - dt.timedelta(days=1))  # janelas de 5 anos: algumas de 8 são recusadas
+        windows.append((w0, w1))
+        w0 = w1 + dt.timedelta(days=1)
     for code, (sid, name, block, unit, freq) in SERIES.items():
-        params = {"formato": "json", "dataInicial": start}
-        if freq == "D":
-            params = {"formato": "json", "dataInicial": start_daily, "dataFinal": today.strftime("%d/%m/%Y")}
         try:
-            data = http.get_json(BASE.format(code=code), params=params, cache_name=f"bcb_sgs/{code}.json", refresh=refresh)
-        except Exception as e:  # série inexistente ou API fora: segue com as demais
-            print(f"[bcb_sgs] código {code} ({sid}) falhou: {e}")
+            if freq == "D":
+                data = []
+                for i, (a, b) in enumerate(windows):
+                    data += http.get_json(BASE.format(code=code), params={"formato": "json", "dataInicial": a.strftime("%d/%m/%Y"), "dataFinal": b.strftime("%d/%m/%Y")},
+                                          cache_name=f"bcb_sgs/{code}_{i}.json", refresh=refresh)
+            else:
+                data = http.get_json(BASE.format(code=code), params={"formato": "json", "dataInicial": start}, cache_name=f"bcb_sgs/{code}.json", refresh=refresh)
+        except Exception as e:  # API instável: mantém o que já havia sido coletado para essa série
+            print(f"[bcb_sgs] código {code} ({sid}) falhou: {e} — mantendo dados anteriores")
+            prev = store.SERIES_DIR / "bcb_sgs.csv"
+            if prev.exists():
+                import pandas as pd
+                old = pd.read_csv(prev)
+                out += old[old.series_id == sid].to_dict("records")
             continue
         ok.append(code)
         for r in data:

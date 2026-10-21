@@ -94,6 +94,35 @@ def main():
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
     print(f"dashboard: {OUT} ({OUT.stat().st_size / 1e6:.1f} MB, {len(sel):,} pontos, {sel.groupby(['source', 'series_id']).ngroups} séries)")
+    export_bi(sel)
+
+
+# CSVs em formato longo publicados junto com o site (dashboard/data/), para BI externo (Looker Studio etc.)
+BI_FILES = {
+    "credito_uf": lambda d: d[(d.source == "bcb_olinda") & (d.block == "credito")],
+    "funding": lambda d: d[(d.block == "funding")],
+    "oferta_cbic": lambda d: d[d.source == "cbic"],
+    "oferta_amostras": lambda d: d[d.source.isin(["abrainc", "secovi"])],
+    "precos": lambda d: d[(d.block == "precos") | (d.series_id.isin(["indices_ivg_r", "indices_mvg_r"]))],
+    "imoveis": lambda d: d[d.block == "imoveis"],
+    "macro_custos": lambda d: d[d.source.isin(["bcb_sgs", "sidra"]) | (d.block == "macro")],
+}
+
+
+def export_bi(df: pd.DataFrame):
+    out = OUT.parent / "data"
+    out.mkdir(exist_ok=True)
+    index = []
+    for name, pick in BI_FILES.items():
+        part = pick(df).copy()
+        part["date"] = part["date"].str[:10]
+        cols = ["source", "series_id", "name", "region", "unit", "freq", "date", "value"]
+        part[cols].to_csv(out / f"{name}.csv", index=False, encoding="utf-8")
+        index.append({"file": f"{name}.csv", "rows": int(len(part)), "series": int(part.series_id.nunique()),
+                      "first": part.date.min() if len(part) else None, "last": part.date.max() if len(part) else None})
+    (out / "index.json").write_text(json.dumps({"built_at": dt.datetime.now().isoformat(timespec="minutes"), "files": index},
+                                               ensure_ascii=False, indent=1), encoding="utf-8")
+    print("BI: " + ", ".join(f"{i['file']} ({i['rows']:,})" for i in index))
 
 
 if __name__ == "__main__":

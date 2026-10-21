@@ -133,6 +133,23 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:12px;margin-top:6px}
 .infobox.inline{max-width:none;margin:4px 0 8px;padding:8px 10px;border-left:2px solid var(--accent);background:var(--hover);border-radius:0 6px 6px 0}
 .sem .formula{color:var(--ink-2);font-size:11.5px;margin-top:2px}.sem .formula b{color:var(--ink);font-weight:600}
 .sem .formula code{font:11px/1.3 ui-monospace,Consolas,monospace}
+.xbtn{font:inherit;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);padding:5px 10px;border-radius:999px;cursor:pointer;margin:8px 0 0}
+.xbtn:hover{background:var(--hover);color:var(--ink)}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 12px;font-size:12.5px;color:var(--ink-2)}
+.ctl label{display:inline-flex;gap:6px;align-items:center}
+.ctl select,.ctl input[type=month]{font:inherit;font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{font:inherit;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);padding:3px 9px;border-radius:999px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.chips button:disabled{opacity:.45;cursor:default}
+.carto{display:block;width:100%;height:auto}
+.carto text{font-size:10px;fill:var(--ink);font-weight:600;pointer-events:none}
+.carto text.v{font-weight:400;fill:var(--ink-2);font-size:9px}
+.carto rect{stroke:var(--surface);stroke-width:2;rx:4}
+.carto rect:hover{stroke:var(--ink)}
+.ramp{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-top:6px}
+.ramp i{display:inline-block;width:18px;height:8px;border-radius:2px}
+th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--ink)}th.sort.on{color:var(--accent-ink)}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -165,12 +182,17 @@ const PAYLOAD = /*__DATA__*/;
 const D = PAYLOAD.data;
 const COLORS = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'].map(v=>`var(${v})`);
 const UF_NAMES = {BR:'Brasil',AC:'Acre',AL:'Alagoas',AM:'Amazonas',AP:'Amapá',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MG:'Minas Gerais',MS:'Mato Grosso do Sul',MT:'Mato Grosso',PA:'Pará',PB:'Paraíba',PE:'Pernambuco',PI:'Piauí',PR:'Paraná',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RO:'Rondônia',RR:'Roraima',RS:'Rio Grande do Sul',SC:'Santa Catarina',SE:'Sergipe',SP:'São Paulo',TO:'Tocantins'};
-const state = {view:'visao', years:5, uf:'BR', city:'São Paulo'};
+const state = {view:'visao', years:5, uf:'BR', city:'São Paulo', asOf:null};
 const IPCA_BASE='2014-01';
 function ipcaIndex(base=IPCA_BASE){ let acc=100; return S('bcb_sgs','ipca').filter(p=>p[0]>=base).map(p=>{acc*=1+p[1]/100; return [p[0],acc];}); }
 
 // ---------- acesso a dados ----------
-function S(src, sid, region='BR'){ const e = D[src]?.[sid]; if(!e) return []; return e.regions[region] || e.regions[Object.keys(e.regions)[0]] || []; }
+let ASOF=null; // 'YYYY-MM': quando definido, toda série é cortada nessa data (controle de tempo do Ciclo)
+function S(src, sid, region='BR'){ const e = D[src]?.[sid]; if(!e) return []; const a = e.regions[region] || e.regions[Object.keys(e.regions)[0]] || []; return ASOF ? a.filter(p=>p[0]<=ASOF) : a; }
+// ---------- exportação ----------
+function seriesToCSV(series, dateFmt){ const dates=[...new Set(series.flatMap(s=>s.data.map(p=>p[0])))].sort(); const esc=v=>'"'+String(v).replace(/"/g,'""')+'"'; const lines=[['periodo',...series.map(s=>s.name)].map(esc).join(';')]; for(const d of dates){ lines.push([dateFmt?dateFmt(d):d,...series.map(s=>{const p=s.data.find(q=>q[0]===d); return p?String(Math.round(p[1]*10000)/10000).replace('.',','):'';})].map(esc).join(';')); } return '﻿'+lines.join('\r\n'); }
+function downloadText(name, text){ const a=el('a',{href:URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),download:name}); document.body.append(a); a.click(); a.remove(); }
+function exportBtn(getSeries, name){ return el('button',{class:'xbtn',type:'button',onclick:()=>downloadText(name,seriesToCSV(getSeries()))},'Exportar CSV'); }
 function has(src,sid,region){ return !!(D[src]?.[sid]?.regions[region]); }
 function regionsOf(src,sid){ return Object.keys(D[src]?.[sid]?.regions||{}); }
 const last = s => s.length ? s[s.length-1] : null;
@@ -282,7 +304,7 @@ function chartCard({title,note,src,span=6,tall=false,render,table,info}){
   const h=el('h3',{},title); if(info&&INFO[info]) h.append(' ',infoBadge(info)); card.append(h); if(note) card.append(el('p',{class:'note'},note));
   const box=el('div',{class:'chart'+(tall?' tall':'')}); card.append(box);
   if(src) card.append(el('p',{class:'src'},'Fonte: '+src));
-  if(table){ const det=el('details'); det.append(el('summary',{},'Ver tabela')); const wrap=el('div',{class:'tablewrap'}); det.append(wrap); card.append(det); det.addEventListener('toggle',()=>{ if(det.open&&!wrap.children.length) wrap.append(dataTable(table())); }); }
+  if(table){ const det=el('details'); det.append(el('summary',{},'Ver tabela')); const wrap=el('div',{class:'tablewrap'}); det.append(wrap); card.append(det); det.addEventListener('toggle',()=>{ if(det.open&&!wrap.children.length){ wrap.append(dataTable(table())); det.append(exportBtn(table, (title||'dados').replace(/[^\wÀ-ÿ]+/g,'_').slice(0,60)+'.csv')); } }); }
   charts.push({box,render}); queueMicrotask(()=>{ card._lg&&card._lg.remove(); render(box); });
   return card;
 }
@@ -376,6 +398,7 @@ function viewOferta(root){
   g.append(chartCard({info:'oferta',title:'Oferta final por região (unidades em estoque ao fim do trimestre)',src:'CBIC/CII — Brain',render:b=>barChart(b,{series:REG.map(r=>({name:r,data:cut(CB('oferta',r))})),freq:'Q'}),table:()=>REG.map(r=>({name:r,data:CB('oferta',r)}))}));
   const cbVSO=CB('vendas').filter(p=>cbO.find(q=>q[0]===p[0])).map(p=>[p[0],p[1]/(p[1]+cbO.find(q=>q[0]===p[0])[1])*100]);
   g.append(chartCard({info:'vso',title:'VSO trimestral — vendas ÷ (vendas + oferta final) (%)',note:'Aproximação: usa a oferta ao fim do trimestre como denominador.',src:'cálculo sobre CBIC/CII',render:b=>lineChart(b,{series:[{name:'VSO',data:cut(cbVSO)}],fmt:v=>nf.format(v)+'%',freq:'Q',area:true,labelEnd:true})}));
+  cbicBI(g);
   g.append(el('div',{class:'c12',html:'<h2 style="font-size:16px;margin:10px 0 -4px">Brasil, amostra Abrainc-Fipe (mensal, ~20 incorporadoras)</h2>'}));
   g.append(chartCard({title:'Lançamentos por segmento — Brasil, amostra Abrainc (unidades/mês)',src:'Abrainc-Fipe',render:b=>barChart(b,{series:[{name:'MCMV',data:cut(A('lancamentos_mcmv'))},{name:'Médio/alto padrão',data:cut(A('lancamentos_map'))},{name:'Outros',data:cut(A('lancamentos_outros'))}]}),table:()=>[{name:'MCMV',data:A('lancamentos_mcmv')},{name:'MAP',data:A('lancamentos_map')},{name:'Total',data:A('lancamentos_total')}]}));
   g.append(chartCard({title:'Vendas por segmento — Brasil, amostra Abrainc (unidades/mês)',src:'Abrainc-Fipe',render:b=>barChart(b,{series:[{name:'MCMV',data:cut(A('vendas_mcmv'))},{name:'Médio/alto padrão',data:cut(A('vendas_map'))},{name:'Outros',data:cut(A('vendas_outros'))}]}),table:()=>[{name:'MCMV',data:A('vendas_mcmv')},{name:'MAP',data:A('vendas_map')},{name:'Total',data:A('vendas_total')}]}));
@@ -409,9 +432,107 @@ function viewCredito(root){
   g.append(chartCard({title:'Forma de financiamento: contratações PF por indexador (% do mês)',note:'TR domina (SBPE/FGTS); IPCA e prefixado surgiram em 2019-21 e recuaram com a alta de juros.',src:'BCB',render:b=>barChart(b,{series:idxShare.map(s=>({name:s.name,data:cut(s.data)})),fmt:v=>nf.format(v)+'%',max:100})}));
   g.append(chartCard({title:'Inadimplência da carteira — PF (% > 90 dias)',src:'BCB',render:b=>lineChart(b,{series:fontes.map(([k,n])=>({name:n,data:cut(C(`credito_estoque_inadimplencia_pf_${k}`))})),fmt:v=>nf2.format(v)+'%',labelEnd:true})}));
   g.append(chartCard({title:'Saldo da carteira — PF por fonte (R$)',src:'BCB',render:b=>barChart(b,{series:fontes.map(([k,n])=>({name:n,data:cut(C(`credito_estoque_carteira_credito_pf_${k}`))})),fmt:fmtBRL})}));
+  creditoBI(g);
   const un=S('abecip','sbpe_unid_total'), unC=S('abecip','sbpe_unid_construcao'), unA=S('abecip','sbpe_unid_aquisicao');
   g.append(chartCard({title:'Unidades financiadas com recursos SBPE — Brasil (construção × aquisição)',note:'Complementa o BCB (que publica só R$). Série nacional: não muda com a UF.',src:'ABECIP',render:b=>barChart(b,{series:[{name:'Aquisição',data:cut(unA)},{name:'Construção',data:cut(unC)}]}),table:()=>[{name:'Aquisição',data:unA},{name:'Construção',data:unC},{name:'Total',data:un}]}));
   root.append(g);
+}
+
+// ---------- CBIC: análise por região ----------
+const CB_REG=['BR','Sudeste','Sul','Nordeste','Centro-Oeste','Norte'];
+const CB_METRICS={
+  lancamentos:{label:'Lançamentos (unid./trimestre)',calc:r=>S('cbic','lancamentos',r),fmt:fmtNum,zero:true},
+  vendas:{label:'Vendas (unid./trimestre)',calc:r=>S('cbic','vendas',r),fmt:fmtNum,zero:true},
+  oferta:{label:'Oferta final (unid.)',calc:r=>S('cbic','oferta',r),fmt:fmtNum,zero:true},
+  meses:{label:'Meses de estoque',calc:r=>join(S('cbic','oferta',r),roll4(S('cbic','vendas',r)),(o,v)=>o/(v/12)),fmt:v=>nf.format(v)+' m',zero:true},
+  vso:{label:'VSO trimestral (%)',calc:r=>join(S('cbic','vendas',r),S('cbic','oferta',r),(v,o)=>v/(v+o)*100),fmt:v=>nf.format(v)+'%',zero:true},
+  absorcao:{label:'Absorção líquida 12m (% das vendas)',calc:r=>join(join(roll4(S('cbic','vendas',r)),roll4(S('cbic','lancamentos',r)),(v,l)=>v-l),roll4(S('cbic','vendas',r)),(a,v)=>a/v*100),fmt:v=>fmtPct(v),zero:true},
+  yoyV:{label:'Vendas 12m — variação anual (%)',calc:r=>yoy(roll4(S('cbic','vendas',r))),fmt:v=>fmtPct(v),zero:true},
+  yoyL:{label:'Lançamentos 12m — variação anual (%)',calc:r=>yoy(roll4(S('cbic','lancamentos',r))),fmt:v=>fmtPct(v),zero:true},
+};
+const cbi={metric:'meses',regs:['Sudeste','Sul','Nordeste','Centro-Oeste','Norte']};
+function cbicBI(g){
+  const card=el('div',{class:'card c12'}); g.append(card);
+  const draw=()=>{
+    card.innerHTML=''; const M=CB_METRICS[cbi.metric];
+    const ctl=el('div',{class:'ctl'}); const mSel=el('select'); Object.entries(CB_METRICS).forEach(([k,m])=>mSel.append(el('option',{value:k},m.label))); mSel.value=cbi.metric; mSel.onchange=()=>{cbi.metric=mSel.value;draw();};
+    const chips=el('div',{class:'chips'}); CB_REG.forEach(r=>{ const on=cbi.regs.includes(r); const b=el('button',{type:'button','aria-pressed':String(on)},r==='BR'?'Brasil':r); b.onclick=()=>{ cbi.regs=on?cbi.regs.filter(x=>x!==r):[...cbi.regs,r]; draw(); }; chips.append(b); });
+    ctl.append(el('label',{},'Métrica ',mSel),chips);
+    card.append(el('h3',{},'Análise por região — escolha a métrica e as regiões ',infoBadge('biReg')),ctl);
+    const inner=el('div',{class:'grid',style:'margin-top:0'}); card.append(inner);
+    const regs=CB_REG.filter(r=>cbi.regs.includes(r)); const series=regs.map(r=>({name:r==='BR'?'Brasil':r,data:cut(M.calc(r)),color:r==='BR'?'var(--muted)':undefined}));
+    const ch=el('div',{class:'c7'}); ch.style.gridColumn='span 7'; const box=el('div',{class:'chart',style:'height:260px'}); ch.append(box); inner.append(ch);
+    const opts={series,fmt:M.fmt,freq:'Q',labelEnd:true,zero:M.zero}; charts.push({box,render:b=>lineChart(b,opts)}); queueMicrotask(()=>lineChart(box,opts));
+    // tabela dinâmica: região × últimos 9 trimestres
+    const tb=el('div'); tb.style.gridColumn='span 5'; const all=CB_REG.map(r=>({name:r==='BR'?'Brasil':r,data:M.calc(r)})); const dates=[...new Set(all.flatMap(s=>s.data.map(p=>p[0])))].sort().slice(-9);
+    const t=el('table'); const hr=el('tr'); hr.append(el('th',{},'Região')); dates.forEach(d=>hr.append(el('th',{class:'n'},fmtQ(d)))); t.append(el('thead',{},hr));
+    const body=el('tbody'); all.forEach(s=>{ const tr=el('tr'); tr.append(el('td',{},el('b',{},s.name))); dates.forEach(d=>{ const p=s.data.find(q=>q[0]===d); tr.append(el('td',{class:'n'},p?M.fmt(p[1]):'–')); }); body.append(tr); }); t.append(body);
+    tb.append(el('div',{class:'note',style:'margin:0 0 6px'},M.label+' — últimos 9 trimestres, todas as regiões'),el('div',{class:'tablewrap'},t),exportBtn(()=>all,`cbic_regioes_${cbi.metric}.csv`)); inner.append(tb);
+    card.append(el('p',{class:'src'},'Fonte: CBIC/CII — Indicadores Imobiliários Nacionais (cálculos do painel)'));
+  };
+  draw();
+}
+
+// ---------- Crédito: análise por UF (cartograma, ranking, comparação) ----------
+const UF_GRID={RR:[1,0],AP:[2,0],AM:[0,1],PA:[1,1],MA:[2,1],CE:[3,1],RN:[4,1],AC:[0,2],RO:[1,2],TO:[2,2],PI:[3,2],PB:[4,2],MT:[1,3],GO:[2,3],BA:[3,3],PE:[4,3],AL:[5,3],MS:[1,4],DF:[2,4],MG:[3,4],SE:[4,4],SP:[2,5],RJ:[3,5],ES:[4,5],PR:[2,6],SC:[2,7],RS:[2,8]};
+const RAMP=['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95','#0d366b'];
+const BI_METRICS={
+  contratado:{label:'Crédito contratado — 12 meses (R$)',sid:f=>`credito_contratacao_contratado_pf_${f}`,agg:roll12,fmt:fmtBRL,share:true,delta:'pct'},
+  carteira:{label:'Saldo da carteira (R$)',sid:f=>`credito_estoque_carteira_credito_pf_${f}`,agg:s=>s,fmt:fmtBRL,share:true,delta:'pct'},
+  taxa:{label:'Taxa média das contratações (% a.a.)',sid:f=>`credito_contratacao_taxa_pf_${f}`,agg:s=>s,fmt:v=>nf2.format(v)+'%',share:false,delta:'pp',higherBad:true},
+  ltv:{label:'LTV médio (%)',sid:f=>`credito_contratacao_ltv_pf_${f}`,agg:s=>s,fmt:v=>nf.format(v)+'%',share:false,delta:'pp'},
+  inad:{label:'Inadimplência > 90 dias (%)',sid:f=>`credito_estoque_inadimplencia_pf_${f}`,agg:s=>s,fmt:v=>nf2.format(v)+'%',share:false,delta:'pp',higherBad:true},
+};
+const BI_FONTES=[['sfh','SFH/SBPE'],['fgts','FGTS'],['livre','Taxa de mercado'],['home_equity','Home equity']];
+const bi={metric:'contratado',fonte:'sfh',ufs:['SP','MG','RJ'],index:true,sort:'value',dir:-1};
+function creditoBI(g){
+  g.append(el('div',{class:'c12',html:'<h2 style="font-size:16px;margin:10px 0 -4px">Análise por UF — compare estados, veja o ranking e o mapa</h2>'}));
+  const card=el('div',{class:'card c12'}); g.append(card);
+  const draw=()=>{
+    card.innerHTML='';
+    const M=BI_METRICS[bi.metric]; const sid=M.sid(bi.fonte);
+    const ufs=regionsOf('bcb_olinda',sid).filter(u=>u!=='BR'&&UF_GRID[u]);
+    const data=ufs.map(u=>{ const s=M.agg(S('bcb_olinda',sid,u)); const L=last(s); const d=M.delta==='pct'?diffPct(s,12):diffAbs(s,12); return {u,s,v:L?L[1]:null,d,date:L?L[0]:null}; }).filter(r=>r.v!=null);
+    const br=M.agg(S('bcb_olinda',sid,'BR')); const brV=last(br)?last(br)[1]:null;
+    // controles
+    const ctl=el('div',{class:'ctl'});
+    const mSel=el('select'); Object.entries(BI_METRICS).forEach(([k,m])=>mSel.append(el('option',{value:k},m.label))); mSel.value=bi.metric; mSel.onchange=()=>{bi.metric=mSel.value;draw();};
+    const fSel=el('select'); BI_FONTES.forEach(([k,n])=>fSel.append(el('option',{value:k},n))); fSel.value=bi.fonte; fSel.onchange=()=>{bi.fonte=fSel.value;draw();};
+    ctl.append(el('label',{},'Métrica ',mSel),el('label',{},'Fonte de recursos ',fSel),el('span',{style:'color:var(--muted)'},data[0]?'· dado de '+fmtYMlong(data[0].date):''));
+    card.append(el('h3',{},'Crédito imobiliário por UF ',infoBadge('biUF')),ctl);
+    const inner=el('div',{class:'grid',style:'margin-top:0'}); card.append(inner);
+    // --- cartograma
+    const vals=data.map(r=>r.v).sort((a,b)=>a-b); const q=i=>vals[Math.min(vals.length-1,Math.floor(i/RAMP.length*vals.length))];
+    const color=v=>{ let k=0; for(let i=1;i<RAMP.length;i++) if(v>=q(i)) k=i; return RAMP[k]; };
+    const cw=52,ch=44,gap=4; const svg=svgEl('svg',{class:'carto',viewBox:`0 0 ${6*(cw+gap)} ${9*(ch+gap)}`,role:'img','aria-label':'Cartograma do Brasil por UF: '+M.label});
+    for(const r of data){ const [cx,cy]=UF_GRID[r.u]; const x=cx*(cw+gap), y=cy*(ch+gap); const rect=svgEl('rect',{x,y,width:cw,height:ch,fill:color(r.v)}); const dark=RAMP.indexOf(color(r.v))>=3;
+      const t1=svgEl('text',{x:x+cw/2,y:y+17,'text-anchor':'middle'}); t1.textContent=r.u; if(dark) t1.style.fill='#fff';
+      const t2=svgEl('text',{class:'v',x:x+cw/2,y:y+31,'text-anchor':'middle'}); t2.textContent=M.share?fmtNum(r.v).replace(' ',' '):M.fmt(r.v); if(dark) t2.style.fill='#dbe6fb';
+      const show=ev=>{ const b=el('div'); b.append(el('div',{class:'d'},UF_NAMES[r.u]||r.u)); const row=el('div',{class:'r'}); row.append(el('span',{},M.label),el('b',{},M.fmt(r.v))); b.append(row); if(r.d!=null){ const row2=el('div',{class:'r'}); row2.append(el('span',{},'12 meses'),el('b',{},M.delta==='pct'?fmtPct(r.d):fmtPct(r.d,2).replace('%',' pp'))); b.append(row2);} showTip(ev.clientX,ev.clientY,b); };
+      rect.addEventListener('pointermove',show); rect.addEventListener('pointerleave',hideTip); svg.append(rect,t1,t2); }
+    const mapCard=el('div',{class:'c4'}); mapCard.append(el('div',{class:'note',style:'margin:0 0 6px'},'Cada quadrado é uma UF (posição aproximada). Cor = '+M.label.toLowerCase()+'; passe o mouse para o valor.'),svg);
+    const ramp=el('div',{class:'ramp'},'menor'); RAMP.forEach(c=>{const i=el('i'); i.style.background=c; ramp.append(i);}); ramp.append('maior'); mapCard.append(ramp); inner.append(mapCard);
+    // --- ranking
+    const rk=el('div',{class:'c4'}); const sorted=[...data].sort((a,b)=>{ const k=bi.sort; const av=k==='uf'?a.u:k==='delta'?(a.d??-1e9):a.v, bv=k==='uf'?b.u:k==='delta'?(b.d??-1e9):b.v; return (av>bv?1:av<bv?-1:0)*bi.dir; });
+    const t=el('table'); const hdr=el('tr'); const th=(k,lab,cls)=>{ const h=el('th',{class:'sort '+(cls||'')+(bi.sort===k?' on':'')},lab+(bi.sort===k?(bi.dir<0?' ↓':' ↑'):'')); h.onclick=()=>{ if(bi.sort===k) bi.dir*=-1; else {bi.sort=k; bi.dir=k==='uf'?1:-1;} draw(); }; return h; };
+    hdr.append(el('th',{},'#'),th('uf','UF'),th('value','Valor','n'),th('delta','12 meses','n'),M.share?th('value','Part.','n'):el('th',{})); t.append(el('thead',{},hdr));
+    const tb=el('tbody'); const totalV=data.reduce((a,r)=>a+r.v,0);
+    sorted.forEach((r,i)=>{ const dcls=r.d==null?'':((r.d>=0)!==!!M.higherBad)?'up':'down'; tb.append(el('tr',{},el('td',{},String(i+1)),el('td',{},el('b',{},r.u),' ',el('span',{style:'color:var(--muted);font-size:11px'},UF_NAMES[r.u]||'')),el('td',{class:'n'},M.fmt(r.v)),el('td',{class:'n '+dcls},r.d==null?'–':(M.delta==='pct'?fmtPct(r.d):fmtPct(r.d,2).replace('%',' pp'))),el('td',{class:'n'},M.share?nf.format(r.v/totalV*100)+'%':''))); });
+    t.append(tb); const wrap=el('div',{class:'tablewrap',style:'max-height:420px'},t); rk.append(el('div',{class:'note',style:'margin:0 0 6px'},'Clique no cabeçalho para ordenar. '+(brV!=null?'Brasil: '+M.fmt(brV):'')),wrap);
+    rk.append(exportBtn(()=>sorted.map(r=>({name:r.u,data:[[r.date,r.v]]})),`ranking_uf_${bi.metric}_${bi.fonte}.csv`)); inner.append(rk);
+    // --- comparação multi-UF
+    const cmp=el('div',{class:'c4'}); const chips=el('div',{class:'chips'});
+    ufs.sort().forEach(u=>{ const on=bi.ufs.includes(u); const b=el('button',{type:'button','aria-pressed':String(on)},u); b.disabled=!on&&bi.ufs.length>=5; b.onclick=()=>{ bi.ufs=on?bi.ufs.filter(x=>x!==u):[...bi.ufs,u]; draw(); }; chips.append(b); });
+    const idxLab=el('label',{},el('input',{type:'checkbox'}),' índice (início do período = 100)'); const cb=idxLab.querySelector('input'); cb.checked=bi.index&&M.share; cb.disabled=!M.share; cb.onchange=()=>{bi.index=cb.checked;draw();};
+    cmp.append(el('div',{class:'note',style:'margin:0 0 6px'},'Até 5 UFs. Brasil sempre em cinza.'),chips,el('div',{class:'ctl',style:'margin:8px 0 4px'},idxLab));
+    const box=el('div',{class:'chart',style:'height:230px'}); cmp.append(box); inner.append(cmp);
+    const prep=s=>{ const c=cut(s); return (bi.index&&M.share&&c.length)?index100(c):c; };
+    const series=[...bi.ufs.map(u=>({name:u,data:prep(M.agg(S('bcb_olinda',sid,u)))})),{name:'BR',data:prep(br),color:'var(--muted)'}];
+    const fmt=(bi.index&&M.share)?v=>nf.format(v):M.fmt;
+    charts.push({box,render:b=>lineChart(b,{series,fmt,labelEnd:true,zero:!(bi.index&&M.share)&&M.share})}); queueMicrotask(()=>lineChart(box,{series,fmt,labelEnd:true,zero:!(bi.index&&M.share)&&M.share}));
+    card.append(el('p',{class:'src'},'Fonte: BCB — Informações do Mercado Imobiliário (PF)'));
+  };
+  draw();
 }
 
 function viewFunding(root){
@@ -515,6 +636,8 @@ const INFO={
   oferta:{f:'Unidades lançadas e ainda não vendidas ao fim do trimestre (oferta final, CBIC)',m:'O estoque do mercado. Cresce quando se lança mais do que se vende.'},
   juroSpread:{f:'Juro real = Selic meta − IPCA 12m; Spread = taxa média SFH/SBPE (PF) − Selic meta',m:'O juro real diz quão caro está o dinheiro; o spread diz se o crédito com poupança está sendo vendido acima ou abaixo desse custo. Juro real alto com spread negativo = demanda travada e funding sob pressão ao mesmo tempo.'},
   distInad:{f:'Distratos ÷ vendas do mês × 100 (Abrainc); inadimplência = atraso > 90 dias ÷ carteira SFH PF × 100 (BCB)',m:'Dois sinais de estresse do comprador: antes da chave (distrato) e depois dela (inadimplência). Distratos reagem rápido a juros; a inadimplência, devagar.'},
+  biUF:{f:'Para cada UF: a métrica escolhida da fonte de recursos escolhida; fluxos (crédito contratado) somados em 12 meses, estoques e taxas no último mês',m:'Compara o mercado de crédito entre estados: o mapa mostra onde o volume ou o risco se concentra, o ranking ordena e mede a variação anual, e o gráfico compara até 5 UFs (em índice, para ver ritmo; em valor, para ver tamanho).'},
+  biReg:{f:'Para cada região da CBIC: lançamentos, vendas e oferta por trimestre; meses de estoque = oferta ÷ (vendas 12m ÷ 12); VSO = vendas ÷ (vendas + oferta); absorção = (vendas − lançamentos) 12m ÷ vendas 12m',m:'Mostra onde o ciclo está mais aquecido ou mais pesado: regiões com estoque alto e absorção negativa tendem a frear lançamentos; o oposto antecipa aceleração.'},
   mesesRegiao:{f:'Para cada região: Oferta final ÷ (Vendas 12m ÷ 12)',m:'Onde o estoque está pesado ou leve. Regiões acima de 14 meses tendem a frear lançamentos; abaixo de 8, a acelerar.'},
 };
 function infoBox(key){ const i=INFO[key]; if(!i) return null; const d=el('div',{class:'infobox'}); d.append(el('div',{},el('b',{},'Fórmula: '),i.f), el('div',{},el('b',{},'Significado: '),i.m)); return d; }
@@ -586,7 +709,8 @@ function sumCard(title, rows, span=4, note=''){
   const card=el('div',{class:`card c${span}`}); card.append(segLabel(title));
   card.append(el('div',{style:'font-size:13px;color:var(--ink-2);margin-top:8px'},`${n} indicadores · ${c.good} favoráveis · ${c.warn} em atenção · ${c.bad} desfavoráveis`));
   const bar=el('div',{class:'sumbar'}); for(const [k,col] of [['good','var(--good)'],['warn','var(--warn-dot)'],['bad','var(--bad)']]){ if(c[k]){ const s=el('span'); s.style.cssText=`flex:${c[k]};background:${col}`; bar.append(s);} } card.append(bar);
-  if(note) card.append(el('div',{class:'note',style:'margin:8px 0 0'},note));
+  if(n===0) card.append(el('div',{class:'note',style:'margin:8px 0 0'},'sem dados para essa data (a série da CBIC começa em 2023)'));
+  else if(note) card.append(el('div',{class:'note',style:'margin:8px 0 0'},note));
   return card;
 }
 function semCard(title, note, rows, span=12){
@@ -610,8 +734,8 @@ function segRows(m, k){
     ['Meses de estoque','meses',m.meses,v=>nf.format(v)+' m',status(lv(m.meses),th.meses),`< ${th.meses[0]} aquecido · > ${th.meses[1]} saturado`,'',true],
     ['VSO trimestral','vso',m.vso,v=>nf.format(v)+'%',status(lv(m.vso),th.vso,false),`> ${th.vso[0]}% favorável · < ${th.vso[1]}% desfavorável`,'',true],
     ['Absorção líquida 12m','absorcao',m.absorcao,v=>fmtPct(v),status(lv(m.absorcao),[0,-5],false),'> 0 favorável · < −5% desfavorável','',true],
-    ['Taxa de reposição','reposicao',m.reposicao,v=>nf2.format(v)+'×',status(Math.abs((lv(m.reposicao)||1)-1),th.repo),`0,9–1,1 equilíbrio · > ${(1+th.repo[1]).toFixed(2).replace('.',',')} excesso de lançamentos`,'',true],
-    ['Lançamentos 12m (var. anual)','yoyL',m.yoyL,v=>fmtPct(v),status(Math.abs(lv(m.yoyL)||0),[10,25]),'variação até ±10% estável · > 25% ciclo acelerando/freando','',true],
+    ['Taxa de reposição','reposicao',m.reposicao,v=>nf2.format(v)+'×',lv(m.reposicao)==null?null:status(Math.abs(lv(m.reposicao)-1),th.repo),`0,9–1,1 equilíbrio · > ${(1+th.repo[1]).toFixed(2).replace('.',',')} excesso de lançamentos`,'',true],
+    ['Lançamentos 12m (var. anual)','yoyL',m.yoyL,v=>fmtPct(v),lv(m.yoyL)==null?null:status(Math.abs(lv(m.yoyL)),[10,25]),'variação até ±10% estável · > 25% ciclo acelerando/freando','',true],
     ['Vendas 12m (var. anual)','yoyV',m.yoyV,v=>fmtPct(v),status(lv(m.yoyV),[0,-5],false),'> 0 favorável · < −5% desfavorável','',true],
   ];
   if(sh) rows.push(['Participação nos lançamentos','share',sh.L,v=>nf.format(v)+'%',status(lv(sh.L),[50,60]),'< 50% favorável · > 60% mercado dependente do programa','recorde da série (2019–) em 2T/26',true]);
@@ -619,14 +743,19 @@ function segRows(m, k){
 }
 
 function viewCiclo(root){
-  const g=el('div',{class:'grid'}); const K=ciclo(); const SG=segMetrics();
+  ASOF=state.asOf||null; const K=ciclo(); const SG=segMetrics(); ASOF=null;
+  const g=el('div',{class:'grid'});
   g.append(el('div',{class:'c12',html:'<p class="note" style="margin:0 0 -4px;color:var(--muted)">Indicadores <b>derivados</b> das séries do painel para ler a fase do ciclo imobiliário, sempre apartando <b>MCMV</b> de <b>MAP</b> (médio e alto padrões = tudo que não é Minha Casa Minha Vida). Faixas de leitura são regras de bolso, não previsões; cada linha diz como foi calculada.</p>'}));
+  // controle de tempo: ver o semáforo como estava em qualquer mês
+  const tc=el('div',{class:'card c12',style:'padding:12px 20px'}); const inp=el('input',{type:'month',min:'2015-01',max:new Date().toISOString().slice(0,7)}); inp.value=state.asOf||''; inp.onchange=()=>{ state.asOf=inp.value||null; render(); };
+  const clr=el('button',{class:'xbtn',type:'button',style:'margin:0',onclick:()=>{state.asOf=null;render();}},'Hoje');
+  tc.append(el('div',{class:'ctl',style:'margin:0'},el('b',{},'Ver o semáforo em'),inp,clr,el('span',{style:'color:var(--muted)'},state.asOf?`Mostrando o estado do ciclo com os dados disponíveis até ${fmtYMlong(state.asOf)}; os gráficos abaixo também param nessa data.`:'Escolha um mês para ver como o ciclo estava naquela época (ex.: 2016-06, 2021-01).'))); g.append(tc);
   // ---- semáforo do mercado como um todo
   const rows=[
     ['Juro real ex-ante','juroReal',K.juroReal,v=>nf2.format(v)+' pp',status(lv(K.juroReal),[4,7]),'< 4 pp favorável · > 7 pp desfavorável','',false],
     ['Spread SBPE − Selic','spread',K.spread,v=>nf2.format(v)+' pp',status(lv(K.spread),[1,0],false),'> 1 pp favorável · < 0 desfavorável','',false],
     ['Absorção líquida 12m','absorcao',K.absorcaoPct,v=>fmtPct(v),status(lv(K.absorcaoPct),[0,-5],false),'> 0 favorável · < −5% desfavorável','',true],
-    ['Taxa de reposição','reposicao',K.reposicao,v=>nf2.format(v)+'×',status(Math.abs((lv(K.reposicao)||1)-1),[0.1,0.25]),'0,9–1,1 equilíbrio · > 1,25 excesso de lançamentos','',true],
+    ['Taxa de reposição','reposicao',K.reposicao,v=>nf2.format(v)+'×',lv(K.reposicao)==null?null:status(Math.abs(lv(K.reposicao)-1),[0.1,0.25]),'0,9–1,1 equilíbrio · > 1,25 excesso de lançamentos','',true],
     ['Meses de estoque','meses',K.mesesEstoque,v=>nf.format(v)+' m',status(lv(K.mesesEstoque),[8,14]),'< 8 aquecido · > 14 saturado','',true],
     ['VSO trimestral','vso',SG.total.vso,v=>nf.format(v)+'%',status(lv(SG.total.vso),[10,7],false),'> 10% favorável · < 7% desfavorável','',true],
     ['Distratos / vendas','distratos',K.distratos,v=>nf.format(v)+'%',status(lv(K.distratos),[10,15]),'< 10% favorável · > 15% desfavorável','',false],
