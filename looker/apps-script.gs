@@ -37,7 +37,10 @@ function atualizarTudo() {
   // aba "indicadores": uma linha com os números da página de abertura
   const ind = baixar('indicadores');
   const valores = ind[1].map(v => (v !== '' && !isNaN(v) ? Number(v) : v));
-  escrever(ss, 'indicadores', [ind[0], valores], {});
+  // textos dos cartões ("0,91%", "+14,7%") ficam como texto: sem isso o Sheets os converte em número
+  const textos = {};
+  ind[0].forEach((c, i) => { if (/_(txt|nota|ref)$/.test(c)) textos[i + 1] = '@'; });
+  escrever(ss, 'indicadores', [ind[0], valores], textos);
   ss.getSheetByName('tudo').getRange('G1').setValue('Atualizado em ' + new Date().toLocaleString('pt-BR'));
 }
 
@@ -46,6 +49,8 @@ function escrever(ss, nome, linhas, formatos) {
   aba.clear();
   const n = linhas.length, m = linhas[0].length;
   if (aba.getMaxRows() < n) aba.insertRowsAfter(aba.getMaxRows(), n - aba.getMaxRows());
-  aba.getRange(1, 1, n, m).setValues(linhas);
+  if (aba.getMaxColumns() < m) aba.insertColumnsAfter(aba.getMaxColumns(), m - aba.getMaxColumns());
+  // formato antes dos valores, para o texto não ser reinterpretado
   Object.keys(formatos).forEach(col => aba.getRange(2, +col, n - 1, 1).setNumberFormat(formatos[col]));
+  aba.getRange(1, 1, n, m).setValues(linhas);
 }
