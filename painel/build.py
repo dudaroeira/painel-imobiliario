@@ -198,7 +198,13 @@ SERIE_LABELS = {
 
 
 def serie_label(source: str, sid: str, name: str) -> str:
-    """Rótulo curto em português, único dentro de cada aba da planilha."""
+    """Rótulo curto em português, único dentro de cada aba da planilha.
+
+    Sem vírgulas: o Looker lê a seleção padrão dos controles como lista separada por vírgula."""
+    return _rotulo(source, sid, name).replace(", ", " · ").replace(",", " ")
+
+
+def _rotulo(source: str, sid: str, name: str) -> str:
     if sid in SERIE_LABELS:
         return SERIE_LABELS[sid]
     if source == "bcb_olinda" and sid.startswith("credito_"):
@@ -249,6 +255,29 @@ def kpis(df: pd.DataFrame) -> pd.DataFrame:
     x = s("abecip", "igmi_r").dropna()
     row |= {"precos_12m": (x.iloc[-1] / x.iloc[-13] - 1) * 100, "precos_ref": f"{mes(x.index[-1])} · Abecip"}
     row["atualizado_em"] = dt.date.today().strftime("%d/%m/%Y")
+    # textos prontos para os cartões do Looker (valor formatado e nota com variação e referência)
+    br = lambda v, d=1: f"{v:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    sinal = lambda v, d=1: ("+" if v >= 0 else "−") + br(abs(v), d)
+    var = lambda k: (row[k] / row[f"{k}_ant"] - 1) * 100
+    row |= {
+        "credito_txt": f"R$ {br(row['credito_12m'] / 1e9)} bi",
+        "credito_nota": f"{sinal(var('credito_12m'))}% sobre os 12 meses anteriores · {row['credito_ref']}",
+        "taxa_txt": f"{br(row['taxa'], 2)}% a.a.",
+        "taxa_nota": f"{sinal(row['taxa'] - row['taxa_ant'], 2)} p.p. em 12 meses · {row['taxa_ref']}",
+        "inadimplencia_txt": f"{br(row['inadimplencia'], 2)}%",
+        "inadimplencia_nota": f"{sinal(row['inadimplencia'] - row['inadimplencia_ant'], 2)} p.p. em 12 meses · {row['inadimplencia_ref']}",
+        "poupanca_txt": f"R$ {br(row['poupanca'] / 1e9)} bi",
+        "poupanca_nota": f"{sinal(var('poupanca'))}% em 12 meses · {row['poupanca_ref']}",
+        "sinapi_txt": f"R$ {br(row['sinapi'], 2)}/m²",
+        "sinapi_nota": f"{sinal(var('sinapi'))}% em 12 meses · {row['sinapi_ref']}",
+        "lancamentos_txt": f"{br(row['lancamentos'], 0)} unid.",
+        "lancamentos_nota": f"{sinal(var('lancamentos'))}% sobre um ano antes · {row['lancamentos_ref']}",
+        "vendas_txt": f"{br(row['vendas'], 0)} unid.",
+        "vendas_nota": f"{sinal(var('vendas'))}% sobre um ano antes · {row['vendas_ref']}",
+        "precos_txt": f"{sinal(row['precos_12m'])}%",
+        "precos_nota": f"variação do IGMI-R em 12 meses · {row['precos_ref']}",
+        "atualizado_txt": f"Dados atualizados em {row['atualizado_em']}",
+    }
     return pd.DataFrame([row])
 
 

@@ -1,88 +1,63 @@
 # Looker Studio (gratuito) sobre os dados do painel
 
+Relatório: [Painel Imobiliário — BI](https://lookerstudio.google.com/reporting/983431e2-c597-41cb-8b1b-69c86977cff8)
+(também embutido na aba **BI (Looker)** do site).
+
 A cadeia é toda automática e sem custo:
 
 1. **Site** (GitHub Actions, todo dia às 06h de Brasília) coleta as fontes e publica CSVs enxutos em
-   `https://dudaroeira.github.io/painel-imobiliario/data/sheets/` (`series_id, region, date_key, value`)
-   mais o dicionário `series.csv` (nome, bloco, unidade e frequência de cada série).
-2. **Planilha-ponte** no Google Drive: cada aba tem só a fórmula
-   `=IMPORTDATA("…/data/sheets/<aba>.csv"; ","; "en_US")` na célula A1. O Google Sheets reexecuta a
-   importação sozinho (cerca de uma vez por hora), sem script nem gatilho.
-3. **Looker Studio** lê as abas da planilha; o cache dele renova a cada 12 horas (ajustável em
-   *Recurso → Gerenciar fontes de dados → Atualização dos dados*).
+   `https://dudaroeira.github.io/painel-imobiliario/data/sheets/`, com colunas em português:
+   `serie, regiao, tema, mes, valor`. Há ainda `indicadores.csv` (os números da página de abertura, já com os
+   textos prontos de cada cartão: `*_txt` e `*_nota`) e `series.csv` (dicionário das séries).
+2. **Planilha-ponte** no Google Drive
+   ([Painel Imobiliário — dados (Looker)](https://docs.google.com/spreadsheets/d/1P6lHKtxmYiZdbf2EelqBSYiFiytCzgs4-iScZYJHNu0/edit)),
+   com o script [`apps-script.gs`](apps-script.gs) (Extensões > Apps Script, projeto "Ponte do painel para o
+   Looker"). Todo dia entre 8h e 9h ele baixa os 11 CSVs, empilha tudo na aba **tudo** (com `mes` como data de
+   verdade) e copia `indicadores.csv` para a aba **indicadores**. A célula G1 da aba `tudo` mostra a hora da
+   última carga.
+3. **Looker Studio** lê as abas `tudo` e `indicadores`. O cache renova a cada 12 horas; para forçar, use
+   *Atualizar dados* no menu de três pontos do relatório.
 
-Planilha atual: [Painel Imobiliário — dados (Looker)](https://docs.google.com/spreadsheets/d/1P6lHKtxmYiZdbf2EelqBSYiFiytCzgs4-iScZYJHNu0/edit)
-(pasta *Painel Imobiliário — dados para Looker* no Drive).
+## Como o relatório está organizado
 
-Relatório: [Painel Imobiliário — BI](https://lookerstudio.google.com/reporting/983431e2-c597-41cb-8b1b-69c86977cff8).
+- **Visão geral**: os principais indicadores, cada um com o último valor, a variação e a referência.
+- **Uma página por tema**, todas com o mesmo modelo: período, série e região no topo; um indicador do período
+  com minigráfico; a evolução mensal da região escolhida; e o ranking das regiões (sem o total Brasil).
+  Cada página filtra a aba `tudo` pelo código do tema (filtros "Tema …" em *Recurso > Gerenciar filtros*).
+
+| Tema (código) | Página | Série padrão | Indicador |
+|---|---|---|---|
+| `cred` | Crédito contratado | PF · SFH/SBPE | soma |
+| `idx` | Crédito por indexador | IPCA | soma |
+| `taxa` | Taxa de juros e LTV | Taxa · SFH/SBPE | média |
+| `cart` | Carteira de crédito | Saldo · SFH/SBPE | média |
+| `inad` | Inadimplência | SFH/SBPE | média |
+| `fund` | Funding | Saldo da poupança SBPE | média |
+| `cbic` | Oferta CBIC | Lançamentos residenciais (CBIC · ~220 cidades) | soma |
+| `amos` | Abrainc e Secovi-SP | Vendas — total (Abrainc) | soma |
+| `prec` | Preços de imóveis | IGMI-R (jan/2014 = 100) | média |
+| `imov` | Perfil dos imóveis | Valor de avaliação (R$) | média |
+| `macro` | Custos e macro | SINAPI · custo por m² (R$) | média |
+
+Fluxos (crédito contratado, lançamentos, vendas) somam no período; taxas, saldos e índices mostram a média.
+O filtro de região vale só para o indicador e o gráfico mensal (estão agrupados com ele). O ranking ignora esse
+filtro e exclui o total Brasil, para não misturar o país com as regiões.
+
+Os rótulos das séries não levam vírgula: o Looker lê a seleção padrão dos controles como lista separada por
+vírgulas.
 
 ## Recriar a planilha (se precisar)
 
-```bash
-python looker/make_sheet.py
-```
-
-Gera `looker/painel_sheets.xlsx`. Envie ao Google Drive, abra com o Google Planilhas e clique em
-**Permitir acesso** no aviso da primeira aba (autoriza as URLs externas para todas as abas).
-
-Por que o terceiro argumento `"en_US"`: os CSVs usam ponto decimal. Sem ele, uma planilha em pt-BR lê
-`9.13` como data (9 de janeiro) e o valor vira um número de série como 46031.
-
-### Páginas do relatório
-
-Cada página tem a mesma estrutura: ranking por região (tabela), série no tempo e dois filtros (região e série).
-A série padrão de cada página aparece no filtro `series_id`; troque por qualquer outra da aba `series`.
-
-| Página | Aba da planilha | Série padrão | Agregação |
-|---|---|---|---|
-| Crédito contratado | `credito_contratado` | `credito_contratacao_contratado_pf_sfh` | Soma |
-| Taxa de juros e LTV | `credito_taxa_ltv` | `credito_contratacao_taxa_pf_sfh` | Média |
-| Carteira de crédito | `credito_carteira` | `credito_estoque_carteira_credito_pf_sfh` | Média |
-| Inadimplência | `credito_inadimplencia` | `credito_estoque_inadimplencia_pf_sfh` | Média |
-| Funding | `funding` | `fontes_sbpe_saldo` | Média |
-| Preços | `precos` | `igmi_r` | Média |
-| Perfil dos imóveis | `imoveis` | `imoveis_valor_avaliacao` | Média |
-| Custos e macro | `macro_custos` | `sinapi_custo_m2` | Média |
-| Crédito por indexador | `credito_indexador` | `credito_contratacao_indexador_pf_ipca` | Soma |
-| Oferta CBIC | `oferta_cbic` | `lancamentos` | Soma |
-| Abrainc e Secovi-SP | `oferta_amostras` | `vendas_total` | Soma |
-
-Atenção: a série no tempo soma (ou faz a média de) todas as regiões visíveis. Como o total `BR` convive com as
-UFs/regiões nas mesmas abas, escolha `BR` ou uma região no filtro para ler o gráfico corretamente.
-
-## Conectar o Looker Studio
-
-Link que cria um relatório já ligado à aba `credito_contratado` (clique em **Salvar e compartilhar**):
-
-<https://datastudio.google.com/reporting/create?c.mode=edit&r.reportName=Painel%20Imobili%C3%A1rio%20%E2%80%94%20BI&ds.connector=googleSheets&ds.datasourceName=credito_contratado&ds.spreadsheetId=1P6lHKtxmYiZdbf2EelqBSYiFiytCzgs4-iScZYJHNu0&ds.worksheetId=590064066&ds.hasHeader=true&ds.refreshFields=true>
-
-Para outras abas: no relatório, **Adicionar dados → Planilhas Google →** a planilha **→** a aba.
-
-Na fonte de dados, ajuste os tipos:
-
-| Campo | Tipo |
-|---|---|
-| `date_key` | Data e hora → *Data (AAAAMMDD)* |
-| `value` | Número (agregação SUM para fluxos em R$; AVG para taxas, LTV, índices e saldos) |
-| `region` | Texto; para mapa use *Geo → Subdivisão do país (1º nível)* nas abas com UF |
-| `series_id` | Texto |
-
-Para ver nomes legíveis, faça uma **mesclagem** (Recurso → Gerenciar mesclagens) entre a aba de dados e a
-aba `series`, chave `series_id`, trazendo `name` e `unit`.
-
-## Visões sugeridas
-
-| Visão | Aba | Como montar |
-|---|---|---|
-| Crédito por UF | `credito_contratado` | Mapa geográfico (`region`), filtro `series_id = credito_contratacao_contratado_pf_sfh`, SUM de `value`, últimos 12 meses |
-| Comparação de UFs no tempo | `credito_contratado` | Série temporal por `date_key`, quebra por `region`, controles de lista para `region` e `series_id` |
-| Taxa e LTV por UF | `credito_taxa_ltv` | Tabela dinâmica: `region` nas linhas, `series_id` nas colunas, AVG de `value`, último mês |
-| Inadimplência | `credito_inadimplencia` | Série temporal, AVG, filtro de `region` |
-| Oferta por região e segmento | `oferta_cbic` | Colunas empilhadas: `date_key`, quebra `region`, filtro `series_id` (`lancamentos`, `vendas`, `oferta`, `*_mcmv`, `*_map`) |
-| Preços por capital | `precos` | Série temporal, filtro `series_id = igmi_r`, quebra `region` |
+1. Crie uma planilha vazia no Google Drive.
+2. Em *Extensões > Apps Script*, cole o conteúdo de [`apps-script.gs`](apps-script.gs) e salve.
+3. Escolha a função `instalar` e clique em *Executar*. Na primeira vez o Google pede autorização ("O Google não
+   verificou este app" > *Avançado* > *Permitir*): o script só lê os CSVs do site e escreve nesta planilha.
+4. `instalar` faz a primeira carga e agenda a atualização diária. Depois, reconecte as fontes do Looker às abas
+   `tudo` e `indicadores` da nova planilha.
 
 ## Limites
 
-- IMPORTDATA recusa arquivos grandes; por isso os CSVs de crédito são divididos por família e ficam até ~1,5 MB.
-- O Google Sheets aceita 10 milhões de células; a planilha usa ~0,6 milhão.
-- Se um dia ficar lento, os CSVs completos (`/data/*.csv`) podem ir para o BigQuery (nível gratuito).
+- O Google Sheets aceita 10 milhões de células; a aba `tudo` usa cerca de 700 mil (140 mil linhas × 5 colunas).
+- Cada execução do Apps Script pode durar até 6 minutos; a carga completa leva menos de um.
+- O IMPORTDATA foi abandonado: com 11 arquivos grandes ele esbarrava na cota do Google ("pode levar mais tempo
+  devido a uma grande quantidade de solicitações").
