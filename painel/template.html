@@ -345,7 +345,7 @@ const SUBS={
   precos:'Índices de preço de transação: IGMI-R (capitais) e IVG-R/MVG-R (BCB)',
   custos:'Custo de construção, PIB da construção, juros, inflação e atividade',
   imoveis:'Perfil dos imóveis financiados: valor, área, tipo e dormitórios',
-  bi:'Relatório interativo no Looker Studio (11 páginas) · acesso restrito às contas convidadas',
+  bi:'Relatório interativo no Looker Studio (visão geral + 11 temas) · acesso restrito às contas convidadas',
   fontes:'Fontes coletadas, catálogo de séries e limitações conhecidas'};
 function icon(id){ const s=svgEl('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor','stroke-width':1.6,'aria-hidden':'true'}); s.innerHTML=ICONS[id]||''; return s; }
 
@@ -598,7 +598,7 @@ function viewBi(root){
   const card=el('div',{class:'card c12'});
   const open=el('a',{href:`https://lookerstudio.google.com/reporting/${LOOKER_ID}`,target:'_blank',rel:'noopener'},'Abrir no Looker Studio ↗');
   card.append(el('h3',{},'Relatório BI'),
-    el('p',{class:'note'},'Use o menu lateral do relatório para trocar de página. Escolha "BR" ou uma região no filtro de região: com o filtro vazio, o gráfico no tempo soma o total Brasil com as regiões. Se aparecer pedido de acesso, entre no Google com uma conta convidada. ',open));
+    el('p',{class:'note'},'A primeira página resume os principais números; as outras trazem um tema cada, com período, série e região no topo (o padrão é Brasil). Use os números à esquerda do relatório para trocar de página. Se aparecer pedido de acesso, entre no Google com uma conta convidada. ',open));
   const frame=el('iframe',{src:`https://datastudio.google.com/embed/reporting/${LOOKER_ID}`,title:'Relatório BI no Looker Studio',loading:'lazy',allowfullscreen:'',
     sandbox:'allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox',
     style:'width:100%;height:max(640px,calc(100vh - 220px));border:0;border-radius:8px;background:#fff;margin-top:8px'});
