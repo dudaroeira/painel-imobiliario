@@ -11,3 +11,6 @@ __pycache__/
 design-mockup/
 dashboard/data/
 looker/painel_sheets.xlsx
+
+# dados internos do ERP UAU (nunca publicar)
+dados/
