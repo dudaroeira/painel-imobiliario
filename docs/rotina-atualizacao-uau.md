@@ -38,6 +38,8 @@ Gera `dados/uau/base/base_financeira_AAAA-MM-DD.xlsx`, a cópia `base_financeira
 
 Para ver o painel, dê dois cliques no arquivo HTML: abre no navegador, sem servidor e sem internet.
 
+Versão online (privada): o painel está publicado como artefato no claude.ai, em https://claude.ai/artifact/Fxf4xeGJniaD4xxEWKwEUD. Só o dono e quem ele compartilhar pelo menu Share da página conseguem abrir; não é um site público. Depois de rodar o `atualizar`, peça ao Claude para republicar o arquivo `dados/uau/painel/painel_financeiro.html` nesse mesmo endereço (o link não muda). O painel público do GitHub Pages não recebe dados do ERP.
+
 ## 4. Conferir
 
 Abra a aba **Resumo** da base e a aba **Exclusoes**. Compare o total a pagar, o total a receber e o saldo bancário com a semana anterior. Variações grandes sem motivo indicam exportação incompleta.
