@@ -38,7 +38,19 @@ Gera `dados/uau/base/base_financeira_AAAA-MM-DD.xlsx`, a cópia `base_financeira
 
 Para ver o painel, dê dois cliques no arquivo HTML: abre no navegador, sem servidor e sem internet.
 
-Versão online (privada): o painel está publicado como artefato no claude.ai, em https://claude.ai/artifact/Fxf4xeGJniaD4xxEWKwEUD. Só o dono e quem ele compartilhar pelo menu Share da página conseguem abrir; não é um site público. Depois de rodar o `atualizar`, peça ao Claude para republicar o arquivo `dados/uau/painel/painel_financeiro.html` nesse mesmo endereço (o link não muda). O painel público do GitHub Pages não recebe dados do ERP.
+### Versão no site, com senha
+
+O painel vai para o site público (GitHub Pages) **cifrado**: `python -m financeiro.publicar` lê o HTML do painel, cifra tudo com AES-256-GCM (chave derivada da senha) e grava `dashboard/financeiro.html`, uma página que pede a senha e decifra o painel no navegador. O repositório e o site só recebem o texto cifrado. A senha fica em `dados/uau/painel/senha_site.txt` (fora do git); para trocá-la, apague o arquivo, rode o `publicar` de novo e avise quem usa.
+
+Toda semana, depois do `atualizar`:
+
+```bash
+python -m financeiro.publicar
+```
+
+Depois commite `dashboard/financeiro.html` e envie para `main`; o workflow do Pages publica em https://dudaroeira.github.io/painel-imobiliario/financeiro.html (link "Financeiro · acesso restrito" no menu do site). Atenção: a página cifrada é pública na internet; a proteção é só a senha, então ela precisa ser forte e não deve ser compartilhada por canais abertos.
+
+Há também uma cópia privada no claude.ai (https://claude.ai/artifact/Fxf4xeGJniaD4xxEWKwEUD), que só abre para o dono e para quem ele compartilhar; peça ao Claude para republicá-la quando quiser.
 
 ## 4. Conferir
 
