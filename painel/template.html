@@ -46,6 +46,9 @@ a{color:var(--accent-ink)}
 .rail button:hover{background:var(--hover);color:var(--ink)}
 .rail button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
 .rail svg{flex:0 0 16px}
+.rail .restrito{margin-top:auto;padding:9px 14px;border-radius:8px;color:var(--ink-2);text-decoration:none;font-weight:500;border:1px dashed var(--border)}
+.rail .restrito small{display:block;color:var(--muted);font-weight:400}
+.rail .restrito:hover{background:var(--hover);color:var(--ink)}
 .rail .foot{margin-top:auto;padding:14px;font-size:11.5px;color:var(--muted);line-height:1.4}.rail .foot b{color:var(--ink-2)}
 main{flex:999 1 560px;min-width:0;padding:0 28px 48px}
 .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:18px 0 14px;border-bottom:1px solid var(--border)}
@@ -67,7 +70,7 @@ section[hidden]{display:none}
 .c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}.c8{grid-column:span 8}
 @media(max-width:1100px){.c3{grid-column:span 6}}
 @media(max-width:900px){.c6,.c4,.c8{grid-column:span 12}.c3{grid-column:span 6}}
-@media(max-width:560px){.c3{grid-column:span 12}main{padding:0 16px 40px}.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--border);flex-direction:row;flex-wrap:wrap;padding:12px}.rail .brand{flex-basis:100%;padding-bottom:8px}.rail .foot{display:none}.rail button{width:auto;padding:7px 10px}}
+@media(max-width:560px){.c3{grid-column:span 12}main{padding:0 16px 40px}.rail{flex-basis:100%;border-right:0;border-bottom:1px solid var(--border);flex-direction:row;flex-wrap:wrap;padding:12px}.rail .brand{flex-basis:100%;padding-bottom:8px}.rail .foot{display:none}.rail button{width:auto;padding:7px 10px}.rail .restrito{margin:0 0 0 auto;padding:7px 10px}}
 .card h3{margin:0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card h2{font-size:16px;margin:0}
 .card .note{margin:2px 0 10px;color:var(--muted);font-size:12px}
@@ -158,6 +161,7 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--ink)}th.sort.o
 <div class="app">
 <nav class="rail" id="nav" role="tablist" aria-label="Seções">
   <div class="brand"><div class="mark">PI</div><div><b>Painel Imobiliário</b><small>Brasil · fontes públicas</small></div></div>
+  <a class="restrito" href="financeiro.html" title="Painel financeiro da empresa; exige senha">Financeiro <small>acesso restrito</small></a>
 </nav>
 <main>
   <div class="topbar">
