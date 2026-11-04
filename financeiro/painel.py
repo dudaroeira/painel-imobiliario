@@ -40,7 +40,8 @@ class Dic:
         return self.idx[s]
 
 
-def carregar(base: Path) -> dict:
+def carregar(base: Path, desde: str | None = None, conciliacao: dict | None = None) -> dict:
+    """desde="AAAA-MM-DD" limita o histórico (pagos, recebidos, movimento) a partir dessa data; posições em aberto não mudam."""
     pkl = base.with_suffix(".pkl")
     if pkl.exists() and pkl.stat().st_mtime >= base.stat().st_mtime - 60:
         abas_pkl = pd.read_pickle(pkl)
@@ -66,6 +67,11 @@ def carregar(base: Path) -> dict:
     recebidas = ler("Recebidas", usecols=["Empresa", "Obra", "Recebimento", "Valor recebido"]) if "Recebidas" in abas else pd.DataFrame(columns=["Empresa", "Obra", "Recebimento", "Valor recebido"])
 
     data_ref = str(resumo.loc[resumo["Indicador"] == "Data de referência", "Valor"].iloc[0])
+    if desde:
+        corte = pd.Timestamp(desde)
+        pagas = pagas[pagas["Pagamento"] >= corte].copy()
+        recebidas = recebidas[recebidas["Recebimento"] >= corte].copy()
+        extrato = extrato[extrato["Data"] >= corte].copy()
     forn, txt = Dic(), Dic()
 
     # dimensões
@@ -140,6 +146,8 @@ def carregar(base: Path) -> dict:
 
     return {
         "dataRef": data_ref,
+        "inicio": (pd.Timestamp(desde) if desde else pagas["Pagamento"].min()).strftime("%Y-%m"),
+        "conciliacao": conciliacao or {},
         "empresas": {str(k): v for k, v in sorted(empresas.items())},
         "obras": list(obras.values()),
         "fornecedores": forn.lista,
@@ -158,8 +166,14 @@ def carregar(base: Path) -> dict:
     }
 
 
-def gerar(base: Path = BASE_PADRAO, destino: Path = SAIDA) -> Path:
-    dados = carregar(base)
+def ler_conciliacao() -> dict:
+    """Data até a qual o caixa está fechado (contas conciliadas), do fechamentos_caixa.xls mais recente."""
+    from financeiro import conciliacao
+    return conciliacao.da_semana(RAIZ)
+
+
+def gerar(base: Path = BASE_PADRAO, destino: Path = SAIDA, desde: str | None = None) -> Path:
+    dados = carregar(base, desde, ler_conciliacao())
     payload = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = TEMPLATE.read_text(encoding="utf-8").replace("/*__DADOS__*/null", payload)
     destino.parent.mkdir(parents=True, exist_ok=True)
