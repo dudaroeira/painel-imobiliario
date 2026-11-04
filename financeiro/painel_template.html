@@ -92,6 +92,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space:
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
 .tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .muted { color: var(--text-muted); }
+.note-box.concil { border-left: 3px solid var(--series-1); font-size: 13px; color: var(--text-primary, inherit); }
 .note-box { font-size: 12px; color: var(--text-secondary); background: var(--surface-2); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
 section[hidden] { display: none; }
 @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } select { min-width: 0; width: 100%; } .filters label { flex: 1 1 100%; } }
@@ -121,6 +122,7 @@ section[hidden] { display: none; }
     <button role="tab" data-tab="forn" aria-selected="false">Fornecedores</button>
   </nav>
 
+  <div class="note-box concil" id="concilNota" hidden></div>
   <section id="tab-geral">
     <div class="kpis" id="kpis"></div>
     <div class="grid2">
@@ -227,9 +229,9 @@ const anos = [...new Set(D.pagasForn.map(r => r[0]))].sort((a, b) => b - a);
 const anoAtual = +aa;
 const PERIODOS = [
   { id: 'a' + anoAtual, nome: `Ano ${anoAtual} (até ${D.dataRef})`, anos: [anoAtual] },
-  { id: 'u3', nome: `Últimos 3 anos (${anoAtual - 2} a ${anoAtual})`, anos: [anoAtual - 2, anoAtual - 1, anoAtual] },
+  ...(anoAtual - 2 >= +D.inicio.slice(0, 4) ? [{ id: 'u3', nome: `Últimos 3 anos (${anoAtual - 2} a ${anoAtual})`, anos: [anoAtual - 2, anoAtual - 1, anoAtual] }] : []),
   ...anos.filter(a => a !== anoAtual).map(a => ({ id: 'a' + a, nome: `Ano ${a}`, anos: [a] })),
-  { id: 'tudo', nome: `Desde jul/2017`, anos: anos.slice() },
+  { id: 'tudo', nome: `Desde ${rotMes(D.inicio)}`, anos: anos.slice() },
 ];
 const S = { emp: 'all', obra: 'all', per: PERIODOS[0].id, tab: 'geral' };
 try { const s = JSON.parse(localStorage.getItem('painelFin') || '{}'); Object.assign(S, s); } catch (e) {}
@@ -425,7 +427,7 @@ function mesesEntre(a, b) { const out = []; let [y, m] = a.split('-').map(Number
 function desembolsoMensal() {
   const rows = pagasMesSel(), per = periodo();
   const ini = `${Math.min(...per.anos)}-01`, fimAno = Math.max(...per.anos), fim = fimAno === anoAtual ? HOJE.slice(0, 7) : `${fimAno}-12`;
-  const meses = mesesEntre(per.id === 'tudo' ? '2017-07' : ini, fim), soma = somaPor(rows, r => r[0], r => r[3]);
+  const meses = mesesEntre(per.id === 'tudo' ? D.inicio : (ini < D.inicio ? D.inicio : ini), fim), soma = somaPor(rows, r => r[0], r => r[3]);
   return { meses, valores: meses.map(m => soma.get(m) || 0) };
 }
 function faixasPagar() {
@@ -599,7 +601,17 @@ document.getElementById('qReceber').oninput = () => renderReceber();
 
 /* ---------- render ---------- */
 const RENDER = { geral: renderGeral, caixa: renderCaixa, pagar: renderPagar, receber: renderReceber, pagas: renderPagas, forn: renderForn };
+function notaConciliacao() {
+  const box = document.getElementById('concilNota'), C = D.conciliacao || {};
+  if (!C.geral) { box.hidden = true; return; }
+  const data = S.emp === 'all' ? C.geral : ((C.porEmpresa || {})[S.emp] || null);
+  box.hidden = false;
+  box.textContent = data
+    ? `Caixa fechado e contas conciliadas até ${data}${S.emp === 'all' ? ' em todas as empresas' : ''}. Até essa data os valores são definitivos; lançamentos posteriores ainda podem mudar com a conciliação, feita cerca de 15 dias após o fim de cada mês.`
+    : 'Esta empresa não tem fechamento de caixa registrado no UAU no período: os valores podem mudar com a conciliação.';
+}
 function render() {
+  notaConciliacao();
   salvar();
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === S.tab)));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== 'tab-' + S.tab);

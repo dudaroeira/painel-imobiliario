@@ -26,6 +26,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 PAINEL = RAIZ / "dados" / "uau" / "painel" / "painel_financeiro.html"
 SENHA = RAIZ / "dados" / "uau" / "painel" / "senha_site.txt"
 SAIDA = RAIZ / "dashboard" / "financeiro.html"
+DESDE = "2025-01-01"  # o site mostra só o histórico a partir desta data
 ITERACOES = 300_000
 
 PALAVRAS = ("tijolo", "laje", "viga", "pilar", "obra", "torre", "sacada", "telhado", "janela", "portal", "alicerce",
@@ -117,7 +118,10 @@ def publicar() -> Path:
         senha = gerar_senha()
         SENHA.write_text(senha + "\n", encoding="utf-8")
         print(f"Senha nova gerada em {SENHA}")
-    html = PAINEL.read_text(encoding="utf-8")
+    from financeiro import painel
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        html = painel.gerar(destino=Path(tmp) / "painel_site.html", desde=DESDE).read_text(encoding="utf-8")
     data = "01/11/2026"
     import re
     m = re.search(r'"dataRef":"(\d{2}/\d{2}/\d{4})"', html)

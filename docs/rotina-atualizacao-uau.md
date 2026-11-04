@@ -16,6 +16,7 @@ Abra **Utilitários > Visualizador de resultados**, pasta **Relatórios** (a rai
 |---|---|---|
 | `base13_modo0_apagar_areceber.xls` | Data inicial `01/07/2017`, data final `31/12/2035`, Relatório `0` · OK | Aba **Registros** · clicar numa linha · **Imp.** > **Arquivo XLS** |
 | `base13_modo1_semana.xls` | Data inicial = **hoje menos 15 dias**, data final = **hoje**, Relatório `1` · OK | Idem |
+| `fechamentos_caixa.xls` | Tela **Financeiro > Fechamento de Caixa/Conta** · Empresa "Vários" (todas) · período pelo **calendário** ao lado (os campos não aceitam digitação): 01/01 do ano anterior até hoje · Fiscal, Banco/Conta e Diário (Caixa) marcados · Buscar | Clicar numa linha · **Imp.** > **Arquivo XLS**. Só consulta: **não** clicar em "Fechamento" na barra |
 | `bancos_saldos.xls` | Tela **Concil.** > aba **Resumo** · Banco "Vários", Conta "Várias" (lupa > marcar todas) · mês corrente (dia 1 até hoje) · Buscar | Clicar numa linha · **Imp.** > **Arquivo XLS** |
 
 Dicas:
@@ -38,9 +39,15 @@ Gera `dados/uau/base/base_financeira_AAAA-MM-DD.xlsx`, a cópia `base_financeira
 
 Para ver o painel, dê dois cliques no arquivo HTML: abre no navegador, sem servidor e sem internet.
 
+### Data de conciliação no painel
+
+O caixa é fechado no UAU cerca de 15 dias depois do fim de cada mês, quando as contas já estão conciliadas. O painel mostra, no topo, até que data os valores são definitivos ("Caixa fechado e contas conciliadas até ..."), lida do `fechamentos_caixa.xls` mais recente (`financeiro/conciliacao.py`). Com todas as empresas selecionadas vale a data mais antiga entre elas; ao filtrar uma empresa, vale a dela. A empresa 31 (empresa de teste) fica fora do cálculo. Em 04/11/2026 todas as empresas do escopo estavam fechadas até 30/09/2026.
+
 ### Versão no site, com senha
 
 O painel vai para o site público (GitHub Pages) **cifrado**: `python -m financeiro.publicar` lê o HTML do painel, cifra tudo com AES-256-GCM (chave derivada da senha) e grava `dashboard/financeiro.html`, uma página que pede a senha e decifra o painel no navegador. O repositório e o site só recebem o texto cifrado. A senha fica em `dados/uau/painel/senha_site.txt` (fora do git); para trocá-la, apague o arquivo, rode o `publicar` de novo e avise quem usa.
+
+O site mostra só o histórico a partir de **01/01/2025** (`DESDE` em `financeiro/publicar.py`); contas a pagar, a receber e saldos atuais aparecem inteiros. O painel local continua com todo o histórico desde 07/2017.
 
 Toda semana, depois do `atualizar`:
 
